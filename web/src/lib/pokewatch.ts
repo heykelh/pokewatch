@@ -68,6 +68,7 @@ export async function fetchAnomalies(limit = 100): Promise<AnomalyRow[]> {
     .limit(limit);
 
   if (error) {
+    // eslint-disable-next-line no-console -- trace serveur volontaire : seul indice en cas d'échec de requête en prod
     console.error("fetchAnomalies:", error.message);
     return [];
   }
