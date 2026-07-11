@@ -9,10 +9,12 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 
 export default async function PokewatchPipeline() {
   const status = await fetchPipelineStatus();
-  const isFresh =
-    status.lastSnapshotDate !== null &&
-    Date.now() - new Date(status.lastSnapshotDate).getTime() 
-      2 * 86_400_000;
+
+  const FRESHNESS_LIMIT_MS = 2 * 86_400_000; // 48h
+  const lastSnapshotAge = status.lastSnapshotDate
+    ? Date.now() - new Date(status.lastSnapshotDate).getTime()
+    : Number.POSITIVE_INFINITY;
+  const isFresh = lastSnapshotAge < FRESHNESS_LIMIT_MS;
 
   return (
     <section className="flex h-full flex-col gap-2">
