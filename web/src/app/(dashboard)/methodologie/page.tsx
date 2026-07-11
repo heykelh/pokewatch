@@ -3,47 +3,52 @@ import Container from "@/components/container";
 const RULES = [
   {
     id: "R1",
-    name: "Plancher au-dessus du trend",
+    name: "Plancher au-dessus du prix de référence",
     code: "low_above_trend",
     signature:
-      "Le prix le plus bas du marché dépasse nettement le prix de référence : les listings bon marché ont disparu, signe possible d'un rachat du fond de marché (buyout).",
-    severity: "Ratio plancher / trend",
+      "Imaginez un marché où une carte se vend habituellement autour de 50 €. D'ordinaire, on trouve toujours quelques vendeurs pressés qui la proposent moins cher, à 40 ou 45 €. Un jour, toutes ces offres bon marché disparaissent d'un coup : la moins chère du marché est soudain à 65 €, au-dessus même du prix habituel. C'est étrange, car ces offres ne disparaissent pas toutes seules. Quelqu'un les a peut-être toutes achetées d'un coup pour assécher le marché (un « buyout »), avant de revendre plus cher.",
+    severity:
+      "Combien de fois le prix de l'offre la moins chère dépasse le prix habituel. Exemple : sévérité 1,5 = l'offre la moins chère coûte 1,5 fois le prix habituel.",
     style: "bg-red-500/10 text-red-600 dark:text-red-400",
   },
   {
     id: "R2",
-    name: "Divergence des ventes du jour",
+    name: "Ventes du jour très au-dessus de l'habitude",
     code: "avg1_divergence",
     signature:
-      "Le prix moyen des ventes du jour décroche fortement de la moyenne 30 jours : pump ou dump potentiellement en cours.",
-    severity: "Ratio avg1 / avg30",
+      "On compare le prix moyen auquel la carte s'est vendue aujourd'hui avec son prix moyen sur les 30 derniers jours. Si la carte se vendait 20 € en moyenne depuis un mois et que les ventes d'aujourd'hui se font à 60 €, quelque chose se passe : soit un vrai engouement (une carte devenue populaire), soit une hausse fabriquée artificiellement pour créer une impression de rareté.",
+    severity:
+      "Le rapport entre le prix des ventes d'aujourd'hui et la moyenne du mois. Exemple : sévérité 3 = les ventes du jour se font à 3 fois le prix habituel.",
     style: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   },
   {
     id: "R3",
-    name: "Saut du plancher, trend stable",
+    name: "L'offre la moins chère bondit du jour au lendemain",
     code: "low_jump",
     signature:
-      "Le plancher bondit en 24h alors que le trend lissé n'a pas bougé : signature classique d'un achat massif des listings les moins chers, avant que le marché ne l'ait intégré.",
-    severity: "Ratio de saut du plancher sur 24h",
+      "Hier, l'offre la moins chère pour cette carte était à 30 €. Aujourd'hui, elle est à 55 €, alors que le prix de référence global n'a presque pas bougé. Un vrai marché monte progressivement, offre après offre. Un bond aussi brutal du « premier prix », sans que le reste ne suive encore, ressemble fort à quelqu'un qui vient de racheter toutes les offres les moins chères en une seule fois. C'est la signature la plus typique d'un buyout, captée le jour même où il se produit.",
+    severity:
+      "Combien de fois le premier prix a été multiplié en 24 heures. Exemple : sévérité 2 = le premier prix a doublé en un jour.",
     style: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
   },
   {
     id: "R4",
-    name: "Variation statistiquement anormale",
+    name: "Un mouvement inhabituel pour cette carte précise",
     code: "trend_zscore",
     signature:
-      "La variation quotidienne du trend est anormale par rapport à la volatilité historique propre de la carte. Une carte calme qui bouge de 10 % est plus suspecte qu'une carte volatile qui fait de même. Active après 14 jours d'historique.",
-    severity: "Z-score (en écarts-types)",
+      "Chaque carte a son tempérament : certaines voient leur prix bouger tous les jours, d'autres sont stables depuis des mois. Cette règle apprend le comportement normal de chaque carte, puis repère les journées qui sortent de ce comportement. Une variation de 10 % ne veut rien dire sur une carte nerveuse, mais elle est très suspecte sur une carte d'ordinaire immobile. C'est la même logique qu'une banque qui repère une dépense inhabituelle sur votre carte bancaire. Cette règle a besoin d'observer une carte pendant au moins 14 jours avant de pouvoir juger.",
+    severity:
+      "À quel point la journée sort de l'ordinaire pour cette carte, mesuré en « écarts-types » (l'unité statistique de l'inhabituel). Au-delà de 3, la journée est vraiment exceptionnelle.",
     style: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
   },
   {
     id: "R5",
-    name: "Vague coordonnée intra-set",
+    name: "Plusieurs cartes de la même série bougent ensemble",
     code: "set_wave",
     signature:
-      "Plusieurs cartes du même set flaggées le même jour : une carte isolée qui bouge peut être organique, une vague simultanée suggère une coordination.",
-    severity: "Nombre de cartes flaggées dans le set",
+      "Les cartes Pokémon sortent par séries (des « sets »). Qu'une carte isolée s'emballe, cela arrive naturellement : un joueur célèbre l'utilise, une vidéo devient virale. Mais que trois, cinq ou sept cartes de la même série déclenchent des alertes le même jour, c'est une autre histoire : les hasards ne se synchronisent pas. Une vague simultanée suggère une action coordonnée sur toute la série.",
+    severity:
+      "Le nombre de cartes de la même série en alerte le même jour.",
     style: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   },
 ];
@@ -51,19 +56,19 @@ const RULES = [
 const PRINCIPLES = [
   {
     title: "Sources officielles uniquement",
-    text: "Prix Cardmarket via des canaux publics et documentés (TCGdex). Aucun scraping, aucune donnée obtenue en violation de conditions d'utilisation.",
+    text: "Les prix proviennent de canaux publics et documentés. Aucune extraction sauvage de sites web (« scraping »), aucune donnée obtenue en violation de conditions d'utilisation.",
   },
   {
-    title: "Minimisation des données personnelles",
-    text: "Le système analyse des prix et des volumes, pas des personnes. Les futures données de vendeurs (couche eBay) seront pseudonymisées par hachage dès l'ingestion, avec rétention limitée.",
+    title: "Aucune donnée personnelle",
+    text: "Le système analyse des prix et des volumes de vente, pas des personnes. Si des données de vendeurs sont un jour analysées, elles seront rendues anonymes dès leur collecte, avec une durée de conservation limitée.",
   },
   {
-    title: "Vocabulaire de suspicion, jamais d'accusation",
-    text: "Le système produit des scores et des patterns « compatibles avec » une coordination. La qualification d'une manipulation relève d'une investigation, pas d'un algorithme.",
+    title: "De la suspicion, jamais d'accusation",
+    text: "Le système signale des situations « compatibles avec » une manipulation. Affirmer qu'une manipulation a eu lieu exigerait une enquête que des chiffres seuls ne remplacent pas.",
   },
   {
-    title: "Traçabilité de bout en bout",
-    text: "Chaque anomalie embarque ses valeurs sources, le seuil franchi et sa lecture. Les seuils vivent en base de données : chaque calibration est datée et auditable. Les réponses brutes de l'API sont conservées pour permettre le re-calcul.",
+    title: "Tout est vérifiable",
+    text: "Chaque alerte conserve les chiffres qui l'ont déclenchée, le seuil franchi et son explication. Les seuils eux-mêmes sont enregistrés et datés : on peut toujours reconstituer pourquoi le système a alerté, et avec quels réglages.",
   },
 ];
 
@@ -73,41 +78,69 @@ export default function MethodologiePage() {
       <Container className="border-b border-border py-4">
         <h1 className="text-lg font-semibold">Méthodologie</h1>
         <p className="text-sm text-muted-foreground">
-          Comment PokéWatch détecte les mouvements de marché anormaux, ce que
+          Comment PokéWatch repère les mouvements de prix anormaux, ce que
           signifient les scores, et ce que le système ne prétend pas faire.
+          Aucune connaissance en finance n&apos;est nécessaire.
         </p>
       </Container>
 
       <Container className="border-b border-border py-6">
         <h2 className="mb-3 text-base font-semibold">
-          L&apos;architecture en entonnoir
+          Le problème qu&apos;on cherche à détecter
         </h2>
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
-            Chaque matin, le pipeline photographie les prix Cardmarket de
-            chaque carte surveillée : prix de référence (trend), prix plancher
-            (low) et moyennes de ventes sur 1, 7 et 30 jours. Chaque photo est
-            comparée à celle de la veille, puis cinq règles déterministes
-            écrites en SQL passent sur ces variations. Toute carte qui franchit
-            un seuil devient une anomalie, enregistrée avec l&apos;intégralité
-            de son contexte chiffré.
+            Certaines cartes Pokémon valent des centaines d&apos;euros, et
+            leur marché fonctionne comme n&apos;importe quel marché : des
+            vendeurs affichent des offres, des acheteurs les acceptent, et les
+            prix évoluent selon l&apos;offre et la demande. Ce marché
+            n&apos;étant pas régulé, certains tentent de le truquer. La
+            technique classique : acheter d&apos;un coup toutes les offres bon
+            marché d&apos;une carte (un <strong>« buyout »</strong>), créer
+            ainsi une rareté artificielle, laisser les prix monter, puis
+            revendre au prix fort. PokéWatch cherche les traces chiffrées que
+            ces opérations laissent dans les prix.
           </p>
+        </div>
+      </Container>
+
+      <Container className="border-b border-border py-6">
+        <h2 className="mb-3 text-base font-semibold">
+          Les trois chiffres qu&apos;on surveille chaque jour
+        </h2>
+        <div className="space-y-3 text-sm text-muted-foreground">
           <p>
-            La détection est volontairement <strong>100 % déterministe</strong>{" "}
-            : pas de boîte noire, chaque alerte est explicable par une règle
-            lisible et des valeurs vérifiables. Les couches suivantes
-            (contexte d&apos;actualité, analyse comportementale des vendeurs,
-            synthèse) affineront la qualification — l&apos;entonnoir va du
-            scan large et automatique vers l&apos;investigation ciblée et
-            documentée.
+            Chaque matin, le système photographie l&apos;état du marché de
+            chaque carte suivie. Trois chiffres résument cette photo :
           </p>
-          <p className="rounded-md border border-border bg-muted/50 p-3">
-            <strong>Le principe cardinal :</strong> une anomalie est un
-            candidat à investigation, pas un verdict. Le moteur détecte des
-            mouvements <em>anormaux</em> ; distinguer une manipulation
-            d&apos;un mouvement légitime (sortie de set, carte jouée en
-            tournoi, annonce de reprint) exige des preuves convergentes que la
-            détection seule ne fournit pas.
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <strong>Le prix de référence</strong> (« trend ») : le prix
+              autour duquel la carte s&apos;échange réellement, calculé par la
+              place de marché en lissant les ventes récentes. C&apos;est le «
+              prix normal » du moment.
+            </li>
+            <li>
+              <strong>Le premier prix</strong> (« low ») : l&apos;offre la
+              moins chère disponible à l&apos;instant de la photo. C&apos;est
+              la porte d&apos;entrée du marché — et la première chose
+              qu&apos;un manipulateur fait disparaître.
+            </li>
+            <li>
+              <strong>Les moyennes de ventes</strong> sur 1, 7 et 30 jours :
+              à quel prix la carte s&apos;est effectivement vendue
+              aujourd&apos;hui, cette semaine, ce mois-ci. Comparer ces trois
+              horizons permet de voir si le présent s&apos;écarte du passé
+              récent.
+            </li>
+          </ul>
+          <p>
+            Chaque photo est ensuite comparée à celle de la veille, et cinq
+            règles automatiques examinent les écarts. Ces règles sont{" "}
+            <strong>délibérément simples et transparentes</strong> : pas
+            d&apos;intelligence artificielle opaque à ce stade, chaque alerte
+            s&apos;explique par une règle lisible et des chiffres
+            vérifiables.
           </p>
         </div>
       </Container>
@@ -116,10 +149,7 @@ export default function MethodologiePage() {
         <h2 className="mb-3 text-base font-semibold">Les cinq règles</h2>
         <div className="space-y-3">
           {RULES.map((rule) => (
-            <div
-              key={rule.id}
-              className="rounded-md border border-border p-4"
-            >
+            <div key={rule.id} className="rounded-md border border-border p-4">
               <div className="mb-1 flex flex-wrap items-center gap-2">
                 <span
                   className={`rounded-md px-2 py-1 text-xs font-medium ${rule.style}`}
@@ -131,8 +161,8 @@ export default function MethodologiePage() {
                 </code>
               </div>
               <p className="text-sm text-muted-foreground">{rule.signature}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                <strong>Sévérité :</strong> {rule.severity}
+              <p className="mt-2 text-xs text-muted-foreground">
+                <strong>Comment lire son score :</strong> {rule.severity}
               </p>
             </div>
           ))}
@@ -140,22 +170,44 @@ export default function MethodologiePage() {
       </Container>
 
       <Container className="border-b border-border py-6">
-        <h2 className="mb-3 text-base font-semibold">Lire la sévérité</h2>
+        <h2 className="mb-3 text-base font-semibold">
+          Lire la sévérité (le score d&apos;une alerte)
+        </h2>
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
-            La sévérité mesure <strong>l&apos;intensité du franchissement de
-            seuil, dans l&apos;unité propre de chaque règle</strong>. Une
-            sévérité de 2,0 sur R3 signifie que le prix plancher a doublé en 24
-            heures ; une sévérité de 4,7 sur R2 signifie que les ventes du jour
-            se font à 4,7 fois la moyenne des 30 derniers jours.
+            Chaque alerte porte un score, sa <strong>sévérité</strong> : il
+            mesure l&apos;ampleur de l&apos;écart détecté, dans l&apos;unité
+            propre à chaque règle. Un score de 2 sur R3 veut dire « le premier
+            prix a doublé en un jour » ; un score de 4,7 sur R2 veut dire «
+            les ventes du jour se font à 4,7 fois le prix habituel ».
           </p>
           <p>
-            Conséquence importante : les sévérités{" "}
-            <strong>ne se comparent pas entre règles</strong>. Un R1 à 18
-            n&apos;est pas « pire » qu&apos;un R4 à 3. Elles servent à
-            prioriser les anomalies au sein d&apos;une même règle. Un score
-            composite inter-règles, pondéré et documenté, fait partie de la
-            feuille de route.
+            Attention au piège :{" "}
+            <strong>
+              les scores ne se comparent pas d&apos;une règle à l&apos;autre
+            </strong>
+            . Un 18 sur R1 n&apos;est pas « pire » qu&apos;un 3 sur R4 — ce
+            sont des unités différentes, comme des degrés et des kilomètres.
+            Le score sert à classer les alertes au sein d&apos;une même règle.
+            Un score global unique, combinant toutes les règles de façon
+            documentée, fait partie de la feuille de route.
+          </p>
+        </div>
+      </Container>
+
+      <Container className="border-b border-border py-6">
+        <h2 className="mb-3 text-base font-semibold">
+          Une alerte n&apos;est pas un verdict
+        </h2>
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p className="rounded-md border border-border bg-muted/50 p-3">
+            <strong>Le principe cardinal du système :</strong> une alerte est
+            un candidat à investigation, pas une preuve de manipulation. Les
+            prix bougent aussi pour d&apos;excellentes raisons — une carte
+            devient populaire en tournoi, une nouvelle série sort, un
+            youtubeur en parle. Le moteur repère l&apos;<em>anormal</em> ;
+            distinguer le truqué du légitime demande des preuves
+            convergentes qu&apos;un calcul seul ne fournit pas.
           </p>
         </div>
       </Container>
@@ -166,38 +218,39 @@ export default function MethodologiePage() {
         </h2>
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
-            <strong>Les marchés minces produisent des artefacts.</strong> Sur
-            une carte rare aux ventes quasi inexistantes, un unique listing à
-            prix de collectionneur suffit à déclencher R1 sans qu&apos;aucun
-            buyout n&apos;ait eu lieu. Exemple réel dans nos données : le
-            Pikachu du Poké Card Creator Pack (ex5.5-5), tiré à une poignée
-            d&apos;exemplaires, affiche un ratio plancher/trend supérieur à
-            100 — c&apos;est un marché fantôme, pas une manipulation. Ce cas
-            est conservé volontairement comme spécimen : le garde-fou «
-            marché mince » de la prochaine calibration devra le neutraliser,
-            et sa disparition des bilans en sera la preuve mesurable.
+            <strong>
+              Les cartes très rares déclenchent de fausses alertes.
+            </strong>{" "}
+            Quand une carte ne s&apos;échange presque jamais, un seul vendeur
+            affichant un prix de collectionneur suffit à faire hurler R1 —
+            sans qu&apos;aucune manipulation n&apos;existe. Exemple réel dans
+            nos données : un Pikachu promotionnel japonais de 2004 (ex5.5-5),
+            tiré à une poignée d&apos;exemplaires, affiche un premier prix à
+            plus de 100 fois son prix de référence. Ce n&apos;est pas un
+            buyout, c&apos;est un marché fantôme où plus rien ne s&apos;échange.
+            Nous le gardons volontairement sous surveillance comme cas
+            d&apos;école : le futur garde-fou « marché trop mince pour être
+            analysé » devra le faire taire, et sa disparition des alertes
+            prouvera que le correctif fonctionne.
           </p>
           <p>
-            <strong>Les mouvements légitimes existent.</strong> Sorties de
-            sets, rotation du format standard, résultats de tournois, annonces
-            de reprint : le marché bouge pour de vraies raisons. Le moteur ne
-            les distingue pas encore — c&apos;est le rôle des couches
-            d&apos;investigation à venir.
+            <strong>Les cartes qui viennent de sortir sont agitées.</strong>{" "}
+            Dans les semaines suivant une sortie, les prix se cherchent avant
+            de se stabiliser. Comparer « aujourd&apos;hui » à une moyenne de
+            30 jours n&apos;a pas grand sens quand la carte n&apos;existe que
+            depuis 20 jours. Une période de quarantaine avant qu&apos;une
+            carte neuve devienne « alertable » est prévue.
           </p>
           <p>
-            <strong>Les cartes récentes sont turbulentes.</strong> Dans les
-            semaines suivant une sortie, les prix « atterrissent » : les
-            moyennes 30 jours embarquent cette turbulence et peuvent générer
-            de fausses divergences. Une période de quarantaine avant
-            flaggabilité est prévue en calibration.
-          </p>
-          <p>
-            <strong>Les seuils initiaux sont des hypothèses.</strong> Ils ont
-            été posés par raisonnement, pas par optimisation. Le processus :
-            observation sans conclusion, identification des sources de bruit,
-            calibration documentée, puis validation par scénarios de test
-            (patterns de manipulation synthétiques que le moteur doit
-            détecter, mouvements organiques sur lesquels il doit se taire).
+            <strong>Les seuils actuels sont des hypothèses de départ.</strong>{" "}
+            À partir de quel écart alerter ? ×1,3 ? ×1,5 ? Ces valeurs ont été
+            posées par raisonnement, pas encore validées par
+            l&apos;expérience. La démarche : observer plusieurs semaines sans
+            conclure, identifier ce qui génère du bruit, ajuster en
+            documentant chaque changement, puis valider avec des scénarios de
+            test — des manipulations simulées que le système doit détecter,
+            et des mouvements naturels sur lesquels il doit rester
+            silencieux.
           </p>
         </div>
       </Container>
