@@ -39,3 +39,37 @@ export async function fetchKpis(): Promise<KpiData> {
     historyDays,
   };
 }
+
+export type AnomalyRow = {
+  card_id: string;
+  detected_date: string;
+  rule: string;
+  severity: number;
+  status: string;
+  details: {
+    reading?: string;
+    [key: string]: unknown;
+  };
+  cards: {
+    name: string;
+    set_name: string | null;
+    image_url: string | null;
+  } | null;
+};
+
+export async function fetchAnomalies(limit = 100): Promise<AnomalyRow[]> {
+  const { data, error } = await supabase
+    .from("anomalies")
+    .select(
+      "card_id, detected_date, rule, severity, status, details, cards(name, set_name, image_url)",
+    )
+    .order("detected_date", { ascending: false })
+    .order("severity", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("fetchAnomalies:", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as AnomalyRow[];
+}

@@ -1,4 +1,9 @@
-import { Gauge, type LucideIcon, MessagesSquare } from "lucide-react";
+import {
+  AlertTriangle,
+  BookOpenText,
+  Gauge,
+  type LucideIcon,
+} from "lucide-react";
 
 export type SiteConfig = typeof siteConfig;
 export type Navigation = {
@@ -8,8 +13,9 @@ export type Navigation = {
 };
 
 export const siteConfig = {
-  title: "VisActor Next Template",
-  description: "Template for VisActor and Next.js",
+  title: "PokéWatch — Surveillance de marché Pokémon TCG",
+  description:
+    "Détection de mouvements de prix anormaux sur le marché des cartes Pokémon. Règles déterministes, scores explicables, anomalies documentées.",
 };
 
 export const navigations: Navigation[] = [
@@ -19,8 +25,13 @@ export const navigations: Navigation[] = [
     href: "/",
   },
   {
-    icon: MessagesSquare,
-    name: "Ticket",
-    href: "/ticket",
+    icon: AlertTriangle,
+    name: "Anomalies",
+    href: "/anomalies",
+  },
+  {
+    icon: BookOpenText,
+    name: "Méthodologie",
+    href: "/methodologie",
   },
 ];
