@@ -3,6 +3,8 @@ import {
   BookOpenText,
   Gauge,
   type LucideIcon,
+  ScrollText,
+  ShieldCheck,
 } from "lucide-react";
 
 export type SiteConfig = typeof siteConfig;
@@ -19,19 +21,9 @@ export const siteConfig = {
 };
 
 export const navigations: Navigation[] = [
-  {
-    icon: Gauge,
-    name: "Dashboard",
-    href: "/",
-  },
-  {
-    icon: AlertTriangle,
-    name: "Anomalies",
-    href: "/anomalies",
-  },
-  {
-    icon: BookOpenText,
-    name: "Méthodologie",
-    href: "/methodologie",
-  },
+  { icon: Gauge, name: "Dashboard", href: "/" },
+  { icon: AlertTriangle, name: "Anomalies", href: "/anomalies" },
+  { icon: ScrollText, name: "Investigations", href: "/investigations" },
+  { icon: BookOpenText, name: "Méthodologie", href: "/methodologie" },
+  { icon: ShieldCheck, name: "Gouvernance", href: "/gouvernance" },
 ];

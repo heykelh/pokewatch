@@ -32,7 +32,7 @@ export default async function PokewatchMetrics() {
     {
       title: "Jours d'historique",
       value: numberFormat.format(kpis.historyDays),
-      note: "Collecte quotidienne 06h30 UTC",
+      note: "Collecte quotidienne automatisée",
       icon: CalendarDays,
     },
   ];

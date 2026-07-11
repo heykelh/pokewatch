@@ -15,6 +15,9 @@ export default async function PokewatchPipeline() {
     ? Date.now() - new Date(status.lastSnapshotDate).getTime()
     : Number.POSITIVE_INFINITY;
   const isFresh = lastSnapshotAge < FRESHNESS_LIMIT_MS;
+  const hoursAgo = Number.isFinite(lastSnapshotAge)
+    ? Math.round(lastSnapshotAge / 3_600_000)
+    : null;
 
   return (
     <section className="flex h-full flex-col gap-2">
@@ -62,7 +65,9 @@ export default async function PokewatchPipeline() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Ingestion automatique chaque matin à 06h30 UTC via GitHub Actions.
+          {hoursAgo !== null
+            ? `Dernière collecte il y a ${hoursAgo}h · ingestion quotidienne automatisée.`
+            : "Ingestion quotidienne automatisée via GitHub Actions."}
         </p>
       </div>
     </section>

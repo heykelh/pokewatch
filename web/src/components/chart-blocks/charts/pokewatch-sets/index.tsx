@@ -7,9 +7,9 @@ export default async function PokewatchSets() {
   return (
     <section className="flex h-full flex-col gap-2">
       <div>
-        <h2 className="text-sm font-medium">Sets les plus flaggés</h2>
+        <h2 className="text-sm font-medium">Sets les plus signalés</h2>
         <p className="text-xs text-muted-foreground">
-          Concentration des alertes par set — 30 derniers jours
+          Concentration des alertes par set / 30 derniers jours
         </p>
       </div>
       <div className="flex flex-grow flex-col justify-center gap-3 py-2">
