@@ -56,6 +56,7 @@ def add_card(client: httpx.Client, card_id: str, known_products: set[str]) -> bo
         "watchlist": True,
         "cm_id_product": id_product or None,
     }).execute()
+    supabase.table("watchlist_log").insert({"card_id": card["id"], "reason": "ajout manuel"}).execute()
     known_products.add(id_product)
     print(f"✓ {card_id} · {card['name']} · trend {trend}€ · produit CM {id_product}")
     return True
