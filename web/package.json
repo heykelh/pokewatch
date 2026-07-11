@@ -1,6 +1,7 @@
 {
   "name": "visactor-next-template",
   "version": "0.1.0",
+  "packageManager": "pnpm@11.11.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
