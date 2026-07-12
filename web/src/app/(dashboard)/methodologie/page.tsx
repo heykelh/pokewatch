@@ -255,6 +255,167 @@ export default function MethodologiePage() {
         </div>
       </Container>
 
+      <Container className="border-b border-border py-6">
+        <h2 className="mb-3 text-base font-semibold">
+          Performance mesurée du moteur
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Le moteur est évalué sur neuf scénarios de test rejoués à chaque
+          modification du code, en intégration continue. Chaque scénario
+          reproduit un pattern observé sur le marché réel : un rachat de
+          plancher, une hausse fabriquée, une hausse légitime, un marché sans
+          échanges, une offre hors-marché. Le moteur doit détecter les
+          premiers et rester silencieux sur les seconds.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                <th className="px-2 py-3 font-medium">Métrique</th>
+                <th className="px-2 py-3 text-right font-medium">
+                  Avant calibration
+                </th>
+                <th className="px-2 py-3 text-right font-medium">
+                  Après calibration
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-border/50">
+                <td className="px-2 py-3">
+                  Précision <span className="text-xs text-muted-foreground">(les alertes émises sont-elles justifiées ?)</span>
+                </td>
+                <td className="px-2 py-3 text-right tabular-nums">50 %</td>
+                <td className="px-2 py-3 text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
+                  100 %
+                </td>
+              </tr>
+              <tr className="border-b border-border/50">
+                <td className="px-2 py-3">
+                  Rappel <span className="text-xs text-muted-foreground">(les vrais cas sont-ils tous attrapés ?)</span>
+                </td>
+                <td className="px-2 py-3 text-right tabular-nums">100 %</td>
+                <td className="px-2 py-3 text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
+                  100 %
+                </td>
+              </tr>
+              <tr className="border-b border-border/50">
+                <td className="px-2 py-3">Faux positifs</td>
+                <td className="px-2 py-3 text-right tabular-nums">2</td>
+                <td className="px-2 py-3 text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
+                  0
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Ces chiffres mesurent la <em>correction</em> du moteur : fait-il ce
+          que son code prétend faire ? Ils ne garantissent pas la{" "}
+          <em>validité</em> des hypothèses sous-jacentes — comme la section
+          suivante le démontre.
+        </p>
+      </Container>
+
+      <Container className="border-b border-border py-6">
+        <h2 className="mb-1 text-base font-semibold">
+          Journal des erreurs corrigées
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Ce projet publie ses erreurs. Un système de surveillance qui
+          dissimulerait ses propres défauts n&apos;aurait aucune légitimité à
+          en signaler chez les autres.
+        </p>
+        <div className="space-y-3">
+          <div className="rounded-md border border-border p-4">
+            <h3 className="mb-1 text-sm font-semibold">
+              Les moyennes de vente de la source sont figées
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              La règle la plus prolifique du moteur (R2) reposait sur la
+              comparaison entre les ventes du jour et la moyenne du mois.
+              Vérification faite sur deux relevés consécutifs du catalogue
+              complet : <strong className="text-foreground">zéro variation
+              sur 70 975 cartes en 24 heures</strong>, alors que le prix de
+              référence, lui, bougeait sur 16,6 % d&apos;entre elles. Ces
+              moyennes ne sont donc pas recalculées quotidiennement : la règle
+              ne détectait aucun mouvement, elle resignalait chaque jour un
+              rapport figé. <strong className="text-foreground">Règle
+              suspendue</strong>, alertes correspondantes purgées.
+            </p>
+          </div>
+          <div className="rounded-md border border-border p-4">
+            <h3 className="mb-1 text-sm font-semibold">
+              Le prix plancher mélange les états de conservation
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Les prix publics agrègent tous les états, de l&apos;exemplaire
+              très abîmé au neuf. Une carte cotée 253 € peut afficher un
+              plancher à 11,89 € : ce n&apos;est pas une affaire, c&apos;est un
+              exemplaire en mauvais état. Les règles fondées sur le plancher
+              (R1, R3) comparaient donc des grandeurs non comparables.{" "}
+              <strong className="text-foreground">Rétrogradées en signaux
+              faibles</strong> ; leur refonte utilisera l&apos;écart du
+              plancher à sa propre habitude, et non sa valeur absolue.
+            </p>
+          </div>
+          <div className="rounded-md border border-border p-4">
+            <h3 className="mb-1 text-sm font-semibold">
+              Une alerte fantôme : le Pikachu à 40 000 €
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Une carte cotée 400 € dont un vendeur affichait un exemplaire à
+              40 000 € déclenchait quotidiennement l&apos;alerte de plus haute
+              sévérité du système. Ce n&apos;était pas un rachat de marché,
+              c&apos;était un vendeur qui ne souhaitait pas vendre. Correctif :
+              les alertes de plancher ne se déclenchent plus que dans une
+              fourchette plausible — au-delà d&apos;un certain écart, il ne
+              s&apos;agit plus d&apos;une manipulation mais d&apos;une offre
+              hors-marché.
+            </p>
+          </div>
+        </div>
+      </Container>
+
+      <Container className="border-b border-border py-6">
+        <h2 className="mb-1 text-base font-semibold">
+          État du moteur et calendrier
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Les données de vente exploitables commencent le 10 juillet 2026. Un
+          moteur de détection statistique a besoin de connaître le comportement{" "}
+          <em>habituel</em> de chaque carte avant de pouvoir juger qu&apos;une
+          journée est anormale. Cette connaissance ne s&apos;achète pas :
+          elle se construit, jour après jour.
+        </p>
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          <li className="rounded-md border border-border p-3">
+            <strong className="text-foreground">Aujourd&apos;hui</strong> —
+            Collecte quotidienne sur environ 14 500 cartes. Règles de contexte
+            (R5, R6) actives. Signaux faibles (R1, R3) conservés à titre
+            indicatif. R2 suspendue.
+          </li>
+          <li className="rounded-md border border-border p-3">
+            <strong className="text-foreground">À 7 jours</strong> — Moyennes
+            mobiles calculées sur notre propre historique, sur la seule donnée
+            réellement vivante. Nouvelle règle de divergence, cette fois sur du
+            mouvement réel.
+          </li>
+          <li className="rounded-md border border-border p-3">
+            <strong className="text-foreground">À 14 jours</strong> —
+            Activation de la détection statistique (R4) : chaque carte est
+            jugée à l&apos;aune de sa propre volatilité. Et d&apos;une règle de
+            divergence au marché : une carte ne compte que si elle s&apos;écarte
+            du mouvement d&apos;ensemble — la distinction entre un marché qui
+            monte et une carte qui décroche.
+          </li>
+          <li className="rounded-md border border-border p-3">
+            <strong className="text-foreground">À 30 jours</strong> — Moteur à
+            pleine puissance, sur une chaîne de données entièrement maîtrisée.
+          </li>
+        </ul>
+      </Container>
+
       <Container className="py-6">
         <h2 className="mb-3 text-base font-semibold">Cadre de conformité</h2>
         <div className="grid grid-cols-1 gap-3 laptop:grid-cols-2">

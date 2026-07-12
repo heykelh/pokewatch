@@ -4,12 +4,14 @@ import PokewatchPipeline from "@/components/chart-blocks/charts/pokewatch-pipeli
 import PokewatchRules from "@/components/chart-blocks/charts/pokewatch-rules";
 import PokewatchSets from "@/components/chart-blocks/charts/pokewatch-sets";
 import Container from "@/components/container";
+import StatusBanner from "@/components/status-banner";
 
 export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
     <div>
+      <StatusBanner />
       <PokewatchMetrics />
       <div className="grid grid-cols-1 divide-y border-b border-border laptop:grid-cols-3 laptop:divide-x laptop:divide-y-0 laptop:divide-border">
         <Container className="py-4 laptop:col-span-2">
