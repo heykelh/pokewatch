@@ -19,10 +19,12 @@ export async function fetchKpis(): Promise<KpiData> {
       .from("anomalies")
       .select("severity")
       .eq("detected_date", today)
+      .not("card_id", "like", "test-%")
       .order("severity", { ascending: false }),
     supabase
       .from("cm_price_snapshots")
       .select("snapshot_date")
+      .not("card_id", "like", "test-%")
       .order("snapshot_date", { ascending: true })
       .limit(1),
   ]);
@@ -63,6 +65,7 @@ export async function fetchAnomalies(limit = 100): Promise<AnomalyRow[]> {
     .select(
       "card_id, detected_date, rule, severity, status, details, cards(name, set_name, image_url)",
     )
+    .not("card_id", "like", "test-%")
     .order("detected_date", { ascending: false })
     .order("severity", { ascending: false })
     .limit(limit);
@@ -92,6 +95,7 @@ export async function fetchAnomalyTimeline(
     .from("anomalies")
     .select("detected_date, rule")
     .gte("detected_date", since)
+    .not("card_id", "like", "test-%")
     .order("detected_date", { ascending: true });
 
   if (error) {
@@ -129,7 +133,8 @@ export async function fetchRuleDistribution(
   const { data, error } = await supabase
     .from("anomalies")
     .select("rule")
-    .gte("detected_date", since);
+    .gte("detected_date", since)
+    .not("card_id", "like", "test-%");
 
   if (error) {
     // eslint-disable-next-line no-console -- trace serveur volontaire
@@ -162,7 +167,8 @@ export async function fetchTopFlaggedSets(
   const { data, error } = await supabase
     .from("anomalies")
     .select("cards(set_name)")
-    .gte("detected_date", since);
+    .gte("detected_date", since)
+    .not("card_id", "like", "test-%");
 
   if (error) {
     // eslint-disable-next-line no-console -- trace serveur volontaire
@@ -194,6 +200,7 @@ export async function fetchPipelineStatus(): Promise<PipelineStatus> {
   const last = await supabase
     .from("cm_price_snapshots")
     .select("snapshot_date")
+    .not("card_id", "like", "test-%")
     .order("snapshot_date", { ascending: false })
     .limit(1);
 
@@ -205,6 +212,7 @@ export async function fetchPipelineStatus(): Promise<PipelineStatus> {
           .from("cm_price_snapshots")
           .select("id", { count: "exact", head: true })
           .eq("snapshot_date", lastDate)
+          .not("card_id", "like", "test-%")
       : Promise.resolve({ count: 0 }),
     supabase
       .from("cards")
