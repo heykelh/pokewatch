@@ -222,3 +222,83 @@ export async function fetchPipelineStatus(): Promise<PipelineStatus> {
     coveragePct: cardCount > 0 ? Math.round((snapCount / cardCount) * 100) : 0,
   };
 }
+
+export type MarketStatus = {
+  cardsCovered: number;
+  historyDays: number;
+  lastDate: string | null;
+  medianReturn: number | null;
+};
+
+export async function fetchMarketStatus(): Promise<MarketStatus> {
+  const last = await supabase
+    .from("market_snapshots")
+    .select("snapshot_date")
+    .order("snapshot_date", { ascending: false })
+    .limit(1);
+
+  const lastDate = last.data?.[0]?.snapshot_date ?? null;
+
+  const [covered, dates] = await Promise.all([
+    lastDate
+      ? supabase
+          .from("market_snapshots")
+          .select("id_product", { count: "exact", head: true })
+          .eq("snapshot_date", lastDate)
+      : Promise.resolve({ count: 0 }),
+    supabase
+      .from("market_snapshots")
+      .select("snapshot_date")
+      .order("snapshot_date", { ascending: true })
+      .limit(1),
+  ]);
+
+  const firstDate = dates.data?.[0]?.snapshot_date;
+  const historyDays =
+    firstDate && lastDate
+      ? Math.round(
+          (new Date(lastDate).getTime() - new Date(firstDate).getTime()) /
+            86_400_000,
+        ) + 1
+      : 0;
+
+  return {
+    cardsCovered: covered.count ?? 0,
+    historyDays,
+    lastDate,
+    medianReturn: null,
+  };
+}
+
+export type MarketMover = {
+  id_product: number;
+  name: string | null;
+  trend: number;
+  prev_trend: number;
+  daily_return: number;
+};
+
+export async function fetchTopMovers(limit = 10): Promise<MarketMover[]> {
+  const last = await supabase
+    .from("market_snapshots")
+    .select("snapshot_date")
+    .order("snapshot_date", { ascending: false })
+    .limit(1);
+
+  const lastDate = last.data?.[0]?.snapshot_date;
+  if (!lastDate) return [];
+
+  const { data, error } = await supabase
+    .from("v_market_movers")
+    .select("id_product, name, trend, prev_trend, daily_return")
+    .eq("snapshot_date", lastDate)
+    .order("daily_return", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    // eslint-disable-next-line no-console -- trace serveur volontaire
+    console.error("fetchTopMovers:", error.message);
+    return [];
+  }
+  return (data ?? []) as MarketMover[];
+}

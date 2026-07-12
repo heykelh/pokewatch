@@ -1,18 +1,24 @@
 import { Activity, AlertTriangle, CalendarDays, Eye } from "lucide-react";
 import Container from "@/components/container";
-import { fetchKpis } from "@/lib/pokewatch";
+import { fetchKpis, fetchMarketStatus } from "@/lib/pokewatch";
 
 const numberFormat = new Intl.NumberFormat("fr-FR");
 
 export default async function PokewatchMetrics() {
-  const kpis = await fetchKpis();
+  const [kpis, market] = await Promise.all([fetchKpis(), fetchMarketStatus()]);
 
   const metrics = [
     {
-      title: "Cartes surveillées",
-      value: numberFormat.format(kpis.watchlistCount),
-      note: "Watchlist active",
+      title: "Cartes scannées",
+      value: numberFormat.format(market.cardsCovered),
+      note: "Scan large du catalogue",
       icon: Eye,
+    },
+    {
+      title: "Watchlist approfondie",
+      value: numberFormat.format(kpis.watchlistCount),
+      note: "Suivi détaillé quotidien",
+      icon: Activity,
     },
     {
       title: "Anomalies aujourd'hui",
@@ -21,18 +27,11 @@ export default async function PokewatchMetrics() {
       icon: AlertTriangle,
     },
     {
-      title: "Sévérité max du jour",
-      value:
-        kpis.maxSeverityToday !== null
-          ? numberFormat.format(kpis.maxSeverityToday)
-          : "—",
-      note: "Dans l'unité de sa règle",
-      icon: Activity,
-    },
-    {
       title: "Jours d'historique",
-      value: numberFormat.format(kpis.historyDays),
-      note: "Collecte quotidienne automatisée",
+      value: numberFormat.format(
+        Math.max(kpis.historyDays, market.historyDays),
+      ),
+      note: "Collecte quotidienne",
       icon: CalendarDays,
     },
   ];
