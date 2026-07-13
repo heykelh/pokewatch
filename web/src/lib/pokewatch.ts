@@ -398,3 +398,34 @@ export async function fetchEventTracking(
     };
   });
 }
+
+export type PipelineHealth = {
+  firstDay: string | null;
+  lastDay: string | null;
+  daysCollected: number;
+  daysMissing: number;
+  cardsLastDay: number;
+  missingDates: string[];
+};
+
+export async function fetchPipelineHealth(): Promise<PipelineHealth> {
+  const [health, missing] = await Promise.all([
+    supabase.from("v_pipeline_health").select("*").limit(1),
+    supabase
+      .from("v_missing_days")
+      .select("jour_manquant")
+      .order("jour_manquant", { ascending: false })
+      .limit(10),
+  ]);
+
+  const h = health.data?.[0];
+
+  return {
+    firstDay: h?.premier_jour ?? null,
+    lastDay: h?.dernier_jour ?? null,
+    daysCollected: h?.jours_collectes ?? 0,
+    daysMissing: h?.jours_manquants ?? 0,
+    cardsLastDay: h?.cartes_dernier_jour ?? 0,
+    missingDates: (missing.data ?? []).map((r) => r.jour_manquant),
+  };
+}
