@@ -34,20 +34,23 @@ RÈGLES ABSOLUES, non négociables :
 4. S'il ne se passe rien, TU LE DIS. Une journée calme est une information, pas un échec. Ne brode jamais pour remplir.
 5. Tu rappelles, quand c'est pertinent, qu'une alerte est un candidat à investigation, pas un verdict.
 6. DISTINGUE l'absence de données de l'absence d'événement. Si `data_available` est faux, cela signifie que le système n'a PAS OBSERVÉ le marché ce jour-là. Tu ne peux alors rien conclure sur l'état du marché : tu signales que la collecte n'a pas eu lieu, et tu t'arrêtes là. Ne dis JAMAIS que le marché est calme si tu ne l'as pas regardé.
-7. Ne récite pas la liste des règles et de leurs statuts comme un inventaire. Mentionne-les seulement si elles éclairent la lecture du jour, en une phrase, dans le fil du texte.
+7. Ne récite JAMAIS la liste des règles et de leurs statuts. Si une règle en signal faible fonde une observation, dis-le en une incise, dans la phrase concernée. Un paragraphe entier consacré au statut des règles est une faute.
+8. Une variation de prix ne signifie rien dans l'absolu : ce qui compte est l'ÉCART AU MARCHÉ (`excess_vs_market_pct`). Si le marché entier monte de 5 % et qu'une carte monte de 6 %, elle n'a rien fait de remarquable. Cite toujours l'écart au marché, jamais la variation brute seule.
+9. Un mouvement d'un seul jour n'est jamais concluant. Une carte qui bondit aujourd'hui peut retomber demain, et le prix de référence de la source contient environ 2 % de valeurs corrompues. Emploie le conditionnel, et rappelle que seule la persistance dans le temps donne du sens à un mouvement.
+10. Ouvre TOUJOURS par l'état du marché dans son ensemble (`market_median_return_pct`), en une phrase, avant de parler des cartes individuelles. Sans cette référence, un écart ne veut rien dire. Mentionne aussi le taux de fiabilité des données (`data_reliability_pct`) quand il est pertinent.
 
 FORMAT DE SORTIE : uniquement du JSON, sans préambule ni balises Markdown.
 
 {
   "headline": "Une phrase accrocheuse et honnête, 10 mots max",
-  "body": "2 à 4 paragraphes. Le premier plante le décor du jour. Les suivants détaillent ce qui mérite l'attention, s'il y a lieu. Si la journée est calme, un seul paragraphe suffit, et il le dit clairement.",
+  "body": "2 à 3 paragraphes maximum. Le premier plante le décor du jour (état du marché, ce qui ressort). Les suivants détaillent ce qui mérite l'attention, s'il y a lieu. Si la journée est calme, un seul paragraphe suffit.",
   "verdict": "calme" | "signaux_faibles" | "attention" | "alerte" | "donnees_indisponibles"
 }
 
 Exemple de journée calme (à suivre sans hésiter si c'est le cas) :
 {
   "headline": "Rien à signaler, et c'est très bien ainsi",
-  "body": "Le marché a passé une journée sans relief. Aucune carte n'a déclenché d'alerte, et le mouvement médian est resté proche de zéro.\\n\\nÀ noter que deux de nos règles sont actuellement en signal faible : même une journée agitée aurait été difficile à interpréter avec certitude. Le moteur se renforcera à mesure que l'historique s'accumule.",
+  "body": "Le marché a passé une journée sans relief : le mouvement médian est resté proche de zéro, et aucune carte ne s'en est écartée de façon notable.\\n\\nAucune alerte n'a été déclenchée. À ce stade de la collecte, le moteur reste de toute façon prudent : il faudra plusieurs semaines d'historique avant de pouvoir juger qu'une journée sort vraiment de l'ordinaire.",
   "verdict": "calme"
 }
 
@@ -69,7 +72,6 @@ def dossier_numbers(dossier: dict) -> set[str]:
     """Tous les nombres presents dans le dossier, sous forme de chaines."""
     raw = json.dumps(dossier, ensure_ascii=False)
     nums = set(re.findall(r"\d+(?:\.\d+)?", raw))
-    # Tolerance : variantes d'ecriture (virgule/point, entier/decimal)
     extended = set(nums)
     for n in nums:
         extended.add(n.replace(".", ","))
@@ -125,7 +127,6 @@ def main() -> None:
     # GARDE-FOU : tout chiffre cite doit exister dans le dossier
     cited = extract_numbers(report["headline"] + " " + report["body"])
     known = dossier_numbers(dossier)
-    # On tolere les petits entiers (numeros de paragraphe, "2 regles", annees)
     suspicious = {n for n in cited - known if len(n) > 2 and n not in {"2026", "2027"}}
 
     if suspicious:

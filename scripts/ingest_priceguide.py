@@ -105,6 +105,8 @@ def main() -> None:
         inserted += len(batch)
         print(f"  {inserted}/{len(rows)}", end="\r")
 
+    print("Rafraichissement des vues d'analyse...")
+    supabase.rpc("refresh_market_views", {}).execute()
     print(f"\n✓ {inserted} snapshots ecrits pour le {snapshot_date}")
 
 

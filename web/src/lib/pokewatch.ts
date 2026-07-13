@@ -310,3 +310,91 @@ export async function fetchTopMovers(
   }
   return (data ?? []) as MarketMover[];
 }
+
+export type DailyReport = {
+  report_date: string;
+  headline: string;
+  body: string;
+  verdict: string;
+};
+
+export async function fetchLatestReport(): Promise<DailyReport | null> {
+  const { data } = await supabase
+    .from("daily_reports")
+    .select("report_date, headline, body, verdict")
+    .order("report_date", { ascending: false })
+    .limit(1);
+  return (data?.[0] as DailyReport) ?? null;
+}
+
+export async function fetchReportArchive(limit = 30): Promise<DailyReport[]> {
+  const { data } = await supabase
+    .from("daily_reports")
+    .select("report_date, headline, body, verdict")
+    .order("report_date", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as DailyReport[];
+}
+
+export type MarketEvent = {
+  id: number;
+  event_date: string;
+  event_type: string;
+  description: string;
+};
+
+export type EventCardTrack = {
+  card_id: string;
+  name: string;
+  baseline_trend: number | null;
+  current_trend: number | null;
+  change_pct: number | null;
+};
+
+export async function fetchEvents(): Promise<MarketEvent[]> {
+  const { data } = await supabase
+    .from("market_events")
+    .select("id, event_date, event_type, description")
+    .order("event_date", { ascending: false });
+  return (data ?? []) as MarketEvent[];
+}
+
+export async function fetchEventTracking(
+  eventId: number,
+  eventDate: string,
+): Promise<EventCardTrack[]> {
+  const { data: links } = await supabase
+    .from("market_event_cards")
+    .select("card_id, cards(name)")
+    .eq("event_id", eventId);
+
+  if (!links?.length) return [];
+
+  const cardIds = links.map((l) => l.card_id);
+
+  const { data: snaps } = await supabase
+    .from("cm_price_snapshots")
+    .select("card_id, snapshot_date, trend")
+    .in("card_id", cardIds)
+    .gte("snapshot_date", eventDate)
+    .order("snapshot_date", { ascending: true });
+
+  return links.map((link) => {
+    const rows = (snaps ?? []).filter((s) => s.card_id === link.card_id);
+    const baseline = rows[0]?.trend ?? null;
+    const current = rows[rows.length - 1]?.trend ?? null;
+    const change =
+      baseline && current && baseline > 0
+        ? (current - baseline) / baseline
+        : null;
+    return {
+      card_id: link.card_id,
+      name:
+        (link.cards as unknown as { name: string } | null)?.name ??
+        link.card_id,
+      baseline_trend: baseline,
+      current_trend: current,
+      change_pct: change,
+    };
+  });
+}

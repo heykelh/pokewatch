@@ -104,7 +104,7 @@ begin
            'jump_ratio', round(d.low / d.prev_low, 2),
            'trend_change_pct', round(abs(d.trend - d.prev_trend) / nullif(d.prev_trend, 0), 3),
            'threshold', cfg_r3,
-           'reading', 'Le plancher a bondi en 24h sans mouvement du prix de reference : achat massif probable des offres les moins cheres.')
+           'reading', 'Le prix plancher a bondi en 24h sans mouvement du prix de reference. Signal faible : le plancher agrege les etats de conservation, ce mouvement peut simplement traduire la vente de l''exemplaire le plus abime. A confirmer par la persistance.')
   from v_price_deltas d
   where d.snapshot_date = p_date
     and d.trend >= cfg_min_trend
