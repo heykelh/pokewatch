@@ -231,50 +231,46 @@ export async function fetchPipelineStatus(): Promise<PipelineStatus> {
   };
 }
 
-export type MarketStatus = {
-  cardsCovered: number;
-  historyDays: number;
-  lastDate: string | null;
+export type MarketPulse = {
+  date: string | null;
+  cardsScanned: number;
+  cardsAnalysed: number;
+  pctReliable: number | null;
   medianReturn: number | null;
+  historyDays: number;
 };
 
-export async function fetchMarketStatus(): Promise<MarketStatus> {
-  const last = await supabase
-    .from("market_snapshots")
-    .select("snapshot_date")
+export async function fetchMarketPulse(): Promise<MarketPulse> {
+  const { data } = await supabase
+    .from("v_market_pulse")
+    .select("*")
     .order("snapshot_date", { ascending: false })
     .limit(1);
 
-  const lastDate = last.data?.[0]?.snapshot_date ?? null;
+  const days = await supabase
+    .from("market_snapshots")
+    .select("snapshot_date")
+    .order("snapshot_date", { ascending: true })
+    .limit(1);
 
-  const [covered, dates] = await Promise.all([
-    lastDate
-      ? supabase
-          .from("market_snapshots")
-          .select("id_product", { count: "exact", head: true })
-          .eq("snapshot_date", lastDate)
-      : Promise.resolve({ count: 0 }),
-    supabase
-      .from("market_snapshots")
-      .select("snapshot_date")
-      .order("snapshot_date", { ascending: true })
-      .limit(1),
-  ]);
+  const first = days.data?.[0]?.snapshot_date;
+  const row = data?.[0];
 
-  const firstDate = dates.data?.[0]?.snapshot_date;
   const historyDays =
-    firstDate && lastDate
+    first && row?.snapshot_date
       ? Math.round(
-          (new Date(lastDate).getTime() - new Date(firstDate).getTime()) /
+          (new Date(row.snapshot_date).getTime() - new Date(first).getTime()) /
             86_400_000,
         ) + 1
       : 0;
 
   return {
-    cardsCovered: covered.count ?? 0,
+    date: row?.snapshot_date ?? null,
+    cardsScanned: row?.cartes_scannees ?? 0,
+    cardsAnalysed: row?.cards_analysees ?? 0,
+    pctReliable: row?.pct_fiable ?? null,
+    medianReturn: row?.median_return ?? null,
     historyDays,
-    lastDate,
-    medianReturn: null,
   };
 }
 
@@ -284,9 +280,13 @@ export type MarketMover = {
   trend: number;
   prev_trend: number;
   daily_return: number;
+  excess_return: number;
 };
 
-export async function fetchTopMovers(limit = 10): Promise<MarketMover[]> {
+export async function fetchTopMovers(
+  limit = 6,
+  direction: "up" | "down" = "up",
+): Promise<MarketMover[]> {
   const last = await supabase
     .from("market_snapshots")
     .select("snapshot_date")
@@ -298,9 +298,9 @@ export async function fetchTopMovers(limit = 10): Promise<MarketMover[]> {
 
   const { data, error } = await supabase
     .from("v_market_movers")
-    .select("id_product, name, trend, prev_trend, daily_return")
+    .select("id_product, name, trend, prev_trend, daily_return, excess_return")
     .eq("snapshot_date", lastDate)
-    .order("daily_return", { ascending: false })
+    .order("excess_return", { ascending: direction === "down" })
     .limit(limit);
 
   if (error) {

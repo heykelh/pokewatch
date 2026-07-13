@@ -1,7 +1,11 @@
-"""Ingestion quotidienne des prix Cardmarket (via TCGdex) vers Supabase.
+"""Ingestion quotidienne des prix Cardmarket ET TCGplayer (via TCGdex) vers Supabase.
 
 Lit la watchlist depuis la table `cards`, snapshot quotidien dans `cm_price_snapshots`.
 Idempotent : rejouable sans doublons (contrainte unique card_id/snapshot_date/source).
+
+Note sur les variantes TCGplayer : l'ordre de priorite est FIXE, jamais base sur le
+prix. Choisir dynamiquement la variante la plus chere ferait suivre un holographique
+un jour et une version normale le lendemain, rendant les variations absurdes.
 """
 import os
 import time
@@ -18,6 +22,9 @@ supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVIC
 API = "https://api.tcgdex.net/v2/en"
 TODAY = date.today().isoformat()
 
+# Ordre de priorite FIXE des variantes TCGplayer
+TCGP_VARIANTS = ("holofoil", "reverseHolofoil", "1stEditionHolofoil", "normal")
+
 
 def get_watchlist() -> list[str]:
     res = supabase.table("cards").select("id").eq("watchlist", True).execute()
@@ -29,11 +36,21 @@ def ingest_card(client: httpx.Client, card_id: str) -> bool:
     if res.status_code != 200:
         print(f"✗ {card_id}: HTTP {res.status_code}")
         return False
+
     card = res.json()
-    cm = (card.get("pricing") or {}).get("cardmarket")
+    pricing = card.get("pricing") or {}
+    cm = pricing.get("cardmarket")
     if not cm:
         print(f"○ {card_id}: pas de pricing Cardmarket")
         return False
+
+    # Variante TCGplayer : premiere disponible dans l'ordre fixe ci-dessus
+    tcgp = pricing.get("tcgplayer") or {}
+    best_variant, best = None, {}
+    for variant in TCGP_VARIANTS:
+        if tcgp.get(variant):
+            best_variant, best = variant, tcgp[variant]
+            break
 
     supabase.table("cm_price_snapshots").upsert({
         "card_id": card["id"],
@@ -44,10 +61,17 @@ def ingest_card(client: httpx.Client, card_id: str) -> bool:
         "avg_holo": cm.get("avg-holo"), "low_holo": cm.get("low-holo"),
         "trend_holo": cm.get("trend-holo"), "avg1_holo": cm.get("avg1-holo"),
         "avg7_holo": cm.get("avg7-holo"), "avg30_holo": cm.get("avg30-holo"),
-        "raw": cm,
+        "tcgp_variant": best_variant,
+        "tcgp_low": best.get("lowPrice"),
+        "tcgp_mid": best.get("midPrice"),
+        "tcgp_high": best.get("highPrice"),
+        "tcgp_market": best.get("marketPrice"),
+        "tcgp_direct_low": best.get("directLowPrice"),
+        "raw": pricing,
     }, on_conflict="card_id,snapshot_date,source").execute()
 
-    print(f"✓ {card_id} (trend: {cm.get('trend')}€)")
+    tag = f" · TCGP {best.get('marketPrice')}$ ({best_variant})" if best else ""
+    print(f"✓ {card_id} (CM {cm.get('trend')}€{tag})")
     return True
 
 

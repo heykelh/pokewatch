@@ -1,16 +1,16 @@
 import { Activity, AlertTriangle, CalendarDays, Eye } from "lucide-react";
 import Container from "@/components/container";
-import { fetchKpis, fetchMarketStatus } from "@/lib/pokewatch";
+import { fetchKpis, fetchMarketPulse } from "@/lib/pokewatch";
 
 const numberFormat = new Intl.NumberFormat("fr-FR");
 
 export default async function PokewatchMetrics() {
-  const [kpis, market] = await Promise.all([fetchKpis(), fetchMarketStatus()]);
+  const [kpis, pulse] = await Promise.all([fetchKpis(), fetchMarketPulse()]);
 
   const metrics = [
     {
       title: "Cartes scannées",
-      value: numberFormat.format(market.cardsCovered),
+      value: numberFormat.format(pulse.cardsScanned),
       note: "Scan large du catalogue",
       icon: Eye,
     },
@@ -29,7 +29,7 @@ export default async function PokewatchMetrics() {
     {
       title: "Jours d'historique",
       value: numberFormat.format(
-        Math.max(kpis.historyDays, market.historyDays),
+        Math.max(kpis.historyDays, pulse.historyDays),
       ),
       note: "Collecte quotidienne",
       icon: CalendarDays,

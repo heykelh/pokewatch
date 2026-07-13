@@ -21,7 +21,7 @@ from supabase import create_client
 load_dotenv()
 supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
-MIN_TREND_EUR = 5.0
+MIN_TREND_EUR = 2.0
 SINGLE_CATEGORY = 51
 BATCH = 1000
 
