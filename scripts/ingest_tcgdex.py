@@ -68,6 +68,7 @@ def ingest_card(client: httpx.Client, card_id: str) -> bool:
         "tcgp_market": best.get("marketPrice"),
         "tcgp_direct_low": best.get("directLowPrice"),
         "raw": pricing,
+        "source_updated_at": cm.get("updated"),
     }, on_conflict="card_id,snapshot_date,source").execute()
 
     tag = f" · TCGP {best.get('marketPrice')}$ ({best_variant})" if best else ""

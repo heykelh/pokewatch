@@ -1,7 +1,7 @@
 name: Daily price ingestion
 on:
   schedule:
-    - cron: "17 5 * * *"   # 05h17 UTC, heure creuse (moins de retard de file d'attente)
+    - cron: "0 13 * * *"   # 05h17 UTC, heure creuse (moins de retard de file d'attente)
   workflow_dispatch:
 jobs:
   ingest:
