@@ -3,9 +3,10 @@ on:
   push:
     paths:
       - 'sql/**'
-      - 'scripts/detect_anomalies.py'
-      - 'scripts/eval_detection.py'
+      - 'scripts/detect_market.py'
+      - 'scripts/eval_market.py'
   workflow_dispatch:
+
 jobs:
   eval:
     runs-on: ubuntu-latest
@@ -15,7 +16,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python scripts/eval_detection.py
+      - run: python scripts/eval_market.py
         env:
           PYTHONUNBUFFERED: "1"
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

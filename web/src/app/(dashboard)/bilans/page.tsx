@@ -1,28 +1,7 @@
 import Container from "@/components/container";
 import { fetchReportArchive } from "@/lib/pokewatch";
+import { VERDICT_STYLES } from "@/lib/verdicts";
 
-const VERDICT_STYLES: Record<string, { label: string; className: string }> = {
-  calme: {
-    label: "Marché calme",
-    className: "bg-green-500/10 text-green-600 dark:text-green-400",
-  },
-  signaux_faibles: {
-    label: "Signaux faibles",
-    className: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-  attention: {
-    label: "Attention",
-    className: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  },
-  alerte: {
-    label: "Alerte",
-    className: "bg-red-500/10 text-red-600 dark:text-red-400",
-  },
-  donnees_indisponibles: {
-    label: "Données indisponibles",
-    className: "bg-muted text-muted-foreground",
-  },
-};
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", {
   weekday: "long",

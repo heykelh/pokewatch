@@ -262,9 +262,11 @@ export default function MethodologiePage() {
         <p className="mb-4 text-sm text-muted-foreground">
           Le moteur est évalué sur neuf scénarios de test rejoués à chaque
           modification du code, en intégration continue. Chaque scénario
-          reproduit un pattern observé sur le marché réel : un rachat de
-          plancher, une hausse fabriquée, une hausse légitime, un marché sans
-          échanges, une offre hors-marché. Le moteur doit détecter les
+          reproduit un comportement réellement observé sur le marché : un
+          décrochage de prix légitime, une carte dont le prix était gelé
+          plusieurs jours avant de rattraper d&apos;un coup, une carte trop
+          peu échangée pour être analysée au jour le jour, une carte qui suit
+          simplement le mouvement d&apos;ensemble. Le moteur doit signaler les
           premiers et rester silencieux sur les seconds.
         </p>
         <div className="overflow-x-auto">
@@ -272,36 +274,38 @@ export default function MethodologiePage() {
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
                 <th className="px-2 py-3 font-medium">Métrique</th>
-                <th className="px-2 py-3 text-right font-medium">
-                  Avant calibration
-                </th>
-                <th className="px-2 py-3 text-right font-medium">
-                  Après calibration
-                </th>
+                <th className="px-2 py-3 text-right font-medium">Résultat</th>
               </tr>
             </thead>
             <tbody>
               <tr className="border-b border-border/50">
                 <td className="px-2 py-3">
-                  Précision <span className="text-xs text-muted-foreground">(les alertes émises sont-elles justifiées ?)</span>
+                  Précision{" "}
+                  <span className="text-xs text-muted-foreground">
+                    (les alertes émises sont-elles justifiées ?)
+                  </span>
                 </td>
-                <td className="px-2 py-3 text-right tabular-nums">50 %</td>
                 <td className="px-2 py-3 text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
                   100 %
                 </td>
               </tr>
               <tr className="border-b border-border/50">
                 <td className="px-2 py-3">
-                  Rappel <span className="text-xs text-muted-foreground">(les vrais cas sont-ils tous attrapés ?)</span>
+                  Rappel{" "}
+                  <span className="text-xs text-muted-foreground">
+                    (les vrais cas sont-ils tous attrapés ?)
+                  </span>
                 </td>
-                <td className="px-2 py-3 text-right tabular-nums">100 %</td>
                 <td className="px-2 py-3 text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
                   100 %
                 </td>
               </tr>
               <tr className="border-b border-border/50">
+                <td className="px-2 py-3">Scénarios couverts</td>
+                <td className="px-2 py-3 text-right tabular-nums">9</td>
+              </tr>
+              <tr className="border-b border-border/50">
                 <td className="px-2 py-3">Faux positifs</td>
-                <td className="px-2 py-3 text-right tabular-nums">2</td>
                 <td className="px-2 py-3 text-right font-semibold tabular-nums text-green-600 dark:text-green-400">
                   0
                 </td>
@@ -312,8 +316,10 @@ export default function MethodologiePage() {
         <p className="mt-3 text-xs text-muted-foreground">
           Ces chiffres mesurent la <em>correction</em> du moteur : fait-il ce
           que son code prétend faire ? Ils ne garantissent pas la{" "}
-          <em>validité</em> des hypothèses sous-jacentes — comme la section
-          suivante le démontre.
+          <em>validité</em> des hypothèses sous-jacentes. Le journal ci-dessous
+          montre pourquoi cette distinction compte : un moteur peut être
+          parfaitement correct et parfaitement faux, s&apos;il repose sur une
+          mauvaise compréhension de ses données.
         </p>
       </Container>
 
