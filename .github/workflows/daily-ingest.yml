@@ -1,11 +1,17 @@
-name: Daily price ingestion
+name: Daily pipeline
 on:
   schedule:
-    - cron: "0 13 * * *"   # 05h17 UTC, heure creuse (moins de retard de file d'attente)
+    - cron: "0 11 * * *"   # 11h UTC = 13h en France
   workflow_dispatch:
+
 jobs:
-  ingest:
+  pipeline:
     runs-on: ubuntu-latest
+    env:
+      PYTHONUNBUFFERED: "1"
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -13,24 +19,14 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
 
+      - name: Telechargement + ingestion Price Guide
+        run: python scripts/download_priceguide.py
+
       - name: Ingestion watchlist (TCGdex)
         run: python scripts/ingest_tcgdex.py
-        env:
-          PYTHONUNBUFFERED: "1"
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Detection des anomalies
         run: python scripts/detect_anomalies.py
-        env:
-          PYTHONUNBUFFERED: "1"
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Bilan quotidien
         run: python scripts/generate_report.py
-        env:
-          PYTHONUNBUFFERED: "1"
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
