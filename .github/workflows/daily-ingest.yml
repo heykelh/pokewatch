@@ -20,13 +20,37 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Telechargement + ingestion Price Guide
-        run: python scripts/download_priceguide.py
+        id: priceguide
+        run: python scripts/download_priceguide.py | tee /tmp/pg.log
 
       - name: Ingestion watchlist (TCGdex)
         run: python scripts/ingest_tcgdex.py
 
       - name: Detection des anomalies
-        run: python scripts/detect_anomalies.py
+        id: detect
+        run: python scripts/detect_market.py | tee /tmp/detect.log
 
       - name: Bilan quotidien
         run: python scripts/generate_report.py
+
+      - name: Notification de succes
+        if: success()
+        run: |
+          SUMMARY=$(grep -E "✓|○" /tmp/pg.log | head -2 | tr '\n' ' ')
+          ANOMALIES=$(grep -oE "R7_market_divergence: [0-9]+" /tmp/detect.log | head -1)
+          curl -H "Title: PokeWatch OK" \
+               -H "Tags: white_check_mark" \
+               -H "Priority: low" \
+               -d "$SUMMARY
+          $ANOMALIES" \
+               "https://ntfy.sh/${{ secrets.NTFY_TOPIC }}"
+
+      - name: Notification d'echec
+        if: failure()
+        run: |
+          curl -H "Title: PokeWatch EN ECHEC" \
+               -H "Tags: rotating_light" \
+               -H "Priority: urgent" \
+               -H "Actions: view, Voir le run, https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+               -d "Le pipeline quotidien a echoue. Un jour de collecte risque d'etre perdu." \
+               "https://ntfy.sh/${{ secrets.NTFY_TOPIC }}"
