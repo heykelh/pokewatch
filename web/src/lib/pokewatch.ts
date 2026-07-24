@@ -322,6 +322,7 @@ export async function fetchLatestReport(): Promise<DailyReport | null> {
   const { data } = await supabase
     .from("daily_reports")
     .select("report_date, headline, body, verdict")
+    .neq("verdict", "donnees_indisponibles")
     .order("report_date", { ascending: false })
     .limit(1);
   return (data?.[0] as DailyReport) ?? null;
