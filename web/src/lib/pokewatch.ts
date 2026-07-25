@@ -242,7 +242,7 @@ export type MarketPulse = {
 
 export async function fetchMarketPulse(): Promise<MarketPulse> {
   const { data } = await supabase
-    .from("v_market_pulse")
+    .from("v_market_pulse_public")
     .select("*")
     .order("snapshot_date", { ascending: false })
     .limit(1);
@@ -250,6 +250,7 @@ export async function fetchMarketPulse(): Promise<MarketPulse> {
   const days = await supabase
     .from("market_snapshots")
     .select("snapshot_date")
+    .gt("id_product", 0) // ignore les cartes de test
     .order("snapshot_date", { ascending: true })
     .limit(1);
 
@@ -290,6 +291,7 @@ export async function fetchTopMovers(
   const last = await supabase
     .from("market_snapshots")
     .select("snapshot_date")
+    .gt("id_product", 0) // ignore les cartes de test (id negatifs, dates 2027)
     .order("snapshot_date", { ascending: false })
     .limit(1);
 
@@ -300,6 +302,7 @@ export async function fetchTopMovers(
     .from("v_market_movers")
     .select("id_product, name, trend, prev_trend, daily_return, excess_return")
     .eq("snapshot_date", lastDate)
+    .gt("id_product", 0) // ceinture et bretelles : jamais de test a l'affichage
     .order("excess_return", { ascending: direction === "down" })
     .limit(limit);
 
