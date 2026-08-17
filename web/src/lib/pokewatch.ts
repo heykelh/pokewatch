@@ -8,23 +8,30 @@ export type KpiData = {
 };
 
 export async function fetchKpis(): Promise<KpiData> {
-  const today = new Date().toISOString().slice(0, 10);
+  // Dernier jour reellement analyse (pas "aujourd'hui" : le pipeline peut ne
+  // pas avoir tourne, ou Cardmarket ne pas avoir publie).
+  const lastDay = await supabase
+    .from("market_anomalies")
+    .select("detected_date")
+    .gt("id_product", 0)
+    .order("detected_date", { ascending: false })
+    .limit(1);
 
-  const [cards, anomalies, history] = await Promise.all([
+  const day = lastDay.data?.[0]?.detected_date;
+
+  const [anomalies, history] = await Promise.all([
+    day
+      ? supabase
+          .from("market_anomalies")
+          .select("severity")
+          .eq("detected_date", day)
+          .gt("id_product", 0)
+          .order("severity", { ascending: false })
+      : Promise.resolve({ data: [] as { severity: number }[] }),
     supabase
-      .from("cards")
-      .select("id", { count: "exact", head: true })
-      .eq("watchlist", true),
-    supabase
-      .from("anomalies")
-      .select("severity")
-      .eq("detected_date", today)
-      .not("card_id", "like", "test-%")
-      .order("severity", { ascending: false }),
-    supabase
-      .from("cm_price_snapshots")
+      .from("market_snapshots")
       .select("snapshot_date")
-      .not("card_id", "like", "test-%")
+      .gt("id_product", 0)
       .order("snapshot_date", { ascending: true })
       .limit(1),
   ]);
@@ -34,16 +41,18 @@ export async function fetchKpis(): Promise<KpiData> {
     ? Math.floor((Date.now() - new Date(firstDate).getTime()) / 86_400_000) + 1
     : 0;
 
+  const rows = anomalies.data ?? [];
+
   return {
-    watchlistCount: cards.count ?? 0,
-    anomaliesToday: anomalies.data?.length ?? 0,
-    maxSeverityToday: anomalies.data?.[0]?.severity ?? null,
+    watchlistCount: rows.length,
+    anomaliesToday: rows.length,
+    maxSeverityToday: rows[0]?.severity ?? null,
     historyDays,
   };
 }
 
 export type AnomalyRow = {
-  card_id: string;
+  id_product: number;
   detected_date: string;
   rule: string;
   severity: number;
@@ -52,20 +61,20 @@ export type AnomalyRow = {
     reading?: string;
     [key: string]: unknown;
   };
-  cards: {
-    name: string;
+  market_products: {
+    name: string | null;
     set_name: string | null;
-    image_url: string | null;
+    card_number: string | null;
   } | null;
 };
 
 export async function fetchAnomalies(limit = 100): Promise<AnomalyRow[]> {
   const { data, error } = await supabase
-    .from("anomalies")
+    .from("market_anomalies")
     .select(
-      "card_id, detected_date, rule, severity, status, details, cards(name, set_name, image_url)",
+      "id_product, detected_date, rule, severity, status, details, market_products(name, set_name, card_number)",
     )
-    .not("card_id", "like", "test-%")
+    .gt("id_product", 0)
     .order("detected_date", { ascending: false })
     .order("severity", { ascending: false })
     .limit(limit);
@@ -92,10 +101,10 @@ export async function fetchAnomalyTimeline(
     .slice(0, 10);
 
   const { data, error } = await supabase
-    .from("anomalies")
+    .from("market_anomalies")
     .select("detected_date, rule")
     .gte("detected_date", since)
-    .not("card_id", "like", "test-%")
+    .gt("id_product", 0)
     .order("detected_date", { ascending: true });
 
   if (error) {
@@ -131,10 +140,10 @@ export async function fetchRuleDistribution(
     .slice(0, 10);
 
   const { data, error } = await supabase
-    .from("anomalies")
+    .from("market_anomalies")
     .select("rule")
     .gte("detected_date", since)
-    .not("card_id", "like", "test-%");
+    .gt("id_product", 0);
 
   if (error) {
     // eslint-disable-next-line no-console -- trace serveur volontaire
@@ -165,10 +174,10 @@ export async function fetchTopFlaggedSets(
     .slice(0, 10);
 
   const { data, error } = await supabase
-    .from("anomalies")
-    .select("cards(set_name)")
+    .from("market_anomalies")
+    .select("market_products(set_name)")
     .gte("detected_date", since)
-    .not("card_id", "like", "test-%");
+    .gt("id_product", 0);
 
   if (error) {
     // eslint-disable-next-line no-console -- trace serveur volontaire
@@ -179,8 +188,8 @@ export async function fetchTopFlaggedSets(
   const buckets = new Map<string, number>();
   for (const row of data ?? []) {
     const setName =
-      (row.cards as unknown as { set_name: string | null } | null)?.set_name ??
-      "Inconnu";
+      (row.market_products as unknown as { set_name: string | null } | null)
+        ?.set_name ?? "Inconnu";
     buckets.set(setName, (buckets.get(setName) ?? 0) + 1);
   }
   return Array.from(buckets.entries())
@@ -198,36 +207,29 @@ export type PipelineStatus = {
 
 export async function fetchPipelineStatus(): Promise<PipelineStatus> {
   const last = await supabase
-    .from("cm_price_snapshots")
+    .from("market_snapshots")
     .select("snapshot_date")
-    .not("card_id", "like", "test-%")
+    .gt("id_product", 0)
     .order("snapshot_date", { ascending: false })
     .limit(1);
 
   const lastDate = last.data?.[0]?.snapshot_date ?? null;
 
-  const [snapshots, cards] = await Promise.all([
-    lastDate
-      ? supabase
-          .from("cm_price_snapshots")
-          .select("id", { count: "exact", head: true })
-          .eq("snapshot_date", lastDate)
-          .not("card_id", "like", "test-%")
-      : Promise.resolve({ count: 0 }),
-    supabase
-      .from("cards")
-      .select("id", { count: "exact", head: true })
-      .eq("watchlist", true),
-  ]);
+  const snapshots = lastDate
+    ? await supabase
+        .from("market_snapshots")
+        .select("id_product", { count: "exact", head: true })
+        .eq("snapshot_date", lastDate)
+        .gt("id_product", 0)
+    : { count: 0 };
 
   const snapCount = snapshots.count ?? 0;
-  const cardCount = cards.count ?? 0;
 
   return {
     lastSnapshotDate: lastDate,
     snapshotsOnLastDate: snapCount,
-    watchlistCount: cardCount,
-    coveragePct: cardCount > 0 ? Math.round((snapCount / cardCount) * 100) : 0,
+    watchlistCount: snapCount,
+    coveragePct: 100,
   };
 }
 
@@ -278,6 +280,8 @@ export async function fetchMarketPulse(): Promise<MarketPulse> {
 export type MarketMover = {
   id_product: number;
   name: string | null;
+  set_name: string | null;
+  card_number: string | null;
   trend: number;
   prev_trend: number;
   daily_return: number;
@@ -300,7 +304,9 @@ export async function fetchTopMovers(
 
   const { data, error } = await supabase
     .from("v_market_movers")
-    .select("id_product, name, trend, prev_trend, daily_return, excess_return")
+    .select(
+      "id_product, name, set_name, card_number, trend, prev_trend, daily_return, excess_return",
+    )
     .eq("snapshot_date", lastDate)
     .gt("id_product", 0) // ceinture et bretelles : jamais de test a l'affichage
     .order("excess_return", { ascending: direction === "down" })

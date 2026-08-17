@@ -4,19 +4,21 @@ import { fetchAnomalies } from "@/lib/pokewatch";
 export const dynamic = "force-dynamic";
 
 const RULE_LABELS: Record<string, string> = {
-  low_above_trend: "R1 · Plancher > Trend",
-  avg1_divergence: "R2 · Divergence avg1/avg30",
-  low_jump: "R3 · Saut du plancher",
-  trend_zscore: "R4 · Z-score",
-  set_wave: "R5 · Vague intra-set",
+  trend_ma_divergence: "R2b · Décrochage de moyenne",
+  market_divergence: "R7 · Divergence au marché",
+  trend_zscore: "R4 · Écart statistique",
+  low_jump: "R3b · Saut du plancher",
+  set_wave: "R5b · Vague intra-extension",
+  pokemon_wave: "R6b · Vague intra-Pokémon",
 };
 
 const RULE_STYLES: Record<string, string> = {
-  low_above_trend: "bg-red-500/10 text-red-600 dark:text-red-400",
-  avg1_divergence: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  low_jump: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  trend_zscore: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  trend_ma_divergence: "bg-green-500/10 text-green-600 dark:text-green-400",
+  market_divergence: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  trend_zscore: "bg-red-500/10 text-red-600 dark:text-red-400",
+  low_jump: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   set_wave: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  pokemon_wave: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
 };
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", {
@@ -32,8 +34,8 @@ export default async function AnomaliesPage() {
       <Container className="border-b border-border py-4">
         <h1 className="text-lg font-semibold">Anomalies détectées</h1>
         <p className="text-sm text-muted-foreground">
-          Mouvements de prix anormaux identifiés par le moteur de règles.
-          Une anomalie est un candidat à investigation, pas un verdict de
+          Mouvements de prix anormaux identifiés par le moteur de règles. Une
+          anomalie est un candidat à investigation, pas un verdict de
           manipulation.
         </p>
       </Container>
@@ -58,38 +60,45 @@ export default async function AnomaliesPage() {
                 </tr>
               </thead>
               <tbody>
-                {anomalies.map((a) => (
-                  <tr
-                    key={`${a.card_id}-${a.detected_date}-${a.rule}`}
-                    className="border-b border-border/50 hover:bg-muted/50"
-                  >
-                    <td className="whitespace-nowrap px-2 py-3 text-muted-foreground">
-                      {dateFormat.format(new Date(a.detected_date))}
-                    </td>
-                    <td className="px-2 py-3 font-medium">
-                      {a.cards?.name ?? a.card_id}
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {a.card_id}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 text-muted-foreground">
-                      {a.cards?.set_name ?? "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-3">
-                      <span
-                        className={`rounded-md px-2 py-1 text-xs font-medium ${RULE_STYLES[a.rule] ?? "bg-muted text-muted-foreground"}`}
-                      >
-                        {RULE_LABELS[a.rule] ?? a.rule}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 text-right font-semibold tabular-nums">
-                      {a.severity}
-                    </td>
-                    <td className="hidden max-w-md px-2 py-3 text-xs text-muted-foreground laptop:table-cell">
-                      {a.details?.reading ?? "—"}
-                    </td>
-                  </tr>
-                ))}
+                {anomalies.map((a) => {
+                  const cardName =
+                    a.market_products?.name?.split(" [")[0] ??
+                    `Produit ${a.id_product}`;
+                  return (
+                    <tr
+                      key={`${a.id_product}-${a.detected_date}-${a.rule}`}
+                      className="border-b border-border/50 hover:bg-muted/50"
+                    >
+                      <td className="whitespace-nowrap px-2 py-3 text-muted-foreground">
+                        {dateFormat.format(new Date(a.detected_date))}
+                      </td>
+                      <td className="px-2 py-3 font-medium">
+                        {cardName}
+                        {a.market_products?.card_number && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {a.market_products.card_number}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-3 text-muted-foreground">
+                        {a.market_products?.set_name ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-3">
+                        <span
+                          className={`rounded-md px-2 py-1 text-xs font-medium ${RULE_STYLES[a.rule] ?? "bg-muted text-muted-foreground"}`}
+                        >
+                          {RULE_LABELS[a.rule] ?? a.rule}
+                        </span>
+                      </td>
+                      <td className="px-2 py-3 text-right font-semibold tabular-nums">
+                        {a.severity}
+                      </td>
+                      <td className="hidden max-w-md px-2 py-3 text-xs text-muted-foreground laptop:table-cell">
+                        {a.details?.reading ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

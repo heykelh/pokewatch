@@ -1,10 +1,10 @@
-"""Investigation eBay ciblee sur les cartes signalees, avec nettoyage des donnees.
+"""Investigation eBay ciblee sur les cartes signalees, avec nettoyage strict.
 
-Principe d'enqueteur : les donnees brutes eBay sont polluees (proxies, lots,
-mauvaises cartes, mauvaises langues). Le nettoyage EST le travail. On ne garde
-que les annonces de LA carte precise, en separant gradees et brutes.
+Principe : recherche LARGE cote eBay (volume), tamis STRICT cote nettoyage.
+On isole les annonces de LA carte precise via son numero de collection,
+on ecarte proxies/lots/accessoires, et on separe gradees et brutes.
 
-RGPD : pseudos vendeurs haches a l'ingestion, jamais en clair.
+RGPD : pseudos vendeurs haches a la reception, jamais en clair.
 
 Usage :
   python scripts/ebay_investigate.py            -> cartes signalees aujourd'hui
@@ -30,7 +30,6 @@ SALT = os.environ["SELLER_HASH_SALT"]
 TCGDEX = "https://api.tcgdex.net/v2/en"
 TODAY = date.today().isoformat()
 
-# Termes qui trahissent une annonce a exclure (proxy, lot, accessoire)
 JUNK_TERMS = re.compile(
     r"\b(proxy|proxies|custom|orica|fan\s?art|reproduction|repro|"
     r"lot|bundle|playset|sleeve|sleeves|protege|toploader|"
@@ -60,7 +59,6 @@ def get_token() -> str:
 
 
 def get_card_meta(client: httpx.Client, card_id: str) -> dict | None:
-    """Recupere nom et numero de collection (localId) depuis TCGdex."""
     res = client.get(f"{TCGDEX}/cards/{card_id}")
     if res.status_code != 200:
         return None
@@ -68,33 +66,34 @@ def get_card_meta(client: httpx.Client, card_id: str) -> dict | None:
     return {
         "name": c.get("name"),
         "local_id": str(c.get("localId") or ""),
-        "set_total": str((c.get("set") or {}).get("cardCount", {}).get("official") or ""),
     }
 
 
 def is_clean(title: str, local_id: str) -> tuple[bool, str]:
-    """Retourne (garder?, raison_du_rejet). Le coeur du travail d'enqueteur."""
+    """Le coeur du travail d'enqueteur. Retourne (garder?, raison_du_rejet)."""
     if JUNK_TERMS.search(title):
         return False, "proxy/lot/accessoire"
-    # Si on connait le numero de collection, on l'exige dans le titre.
-    # C'est le filtre le plus fiable pour isoler LA bonne carte.
-    if local_id and local_id not in title:
-        return False, f"numero {local_id} absent du titre"
+    # Filtre decisif : le numero de collection doit apparaitre dans le titre.
+    # On teste plusieurs formes ("215", "215/", "215 ") pour tolerer les
+    # variations d'ecriture des vendeurs, sans accepter un simple sous-nombre.
+    if local_id:
+        pattern = re.compile(rf"\b0*{re.escape(local_id)}\b")
+        if not pattern.search(title):
+            return False, f"numero {local_id} absent"
     return True, ""
 
 
 def classify_grading(condition: str | None, title: str) -> str:
-    """Separe les populations : gradee vs brute (marches distincts)."""
     t = (title or "").lower()
     if condition and "grad" in condition.lower():
         return "graded"
-    if re.search(r"\b(psa|bgs|cgc|ace|slab)\b", t):
+    if re.search(r"\b(psa|bgs|cgc|ace|slab|gradee?|graded)\b", t):
         return "graded"
     return "raw"
 
 
 def investigate(client: httpx.Client, token: str, card_id: str, meta: dict) -> None:
-    query = f"{meta['name']} {meta['local_id']} pokemon".strip()
+    query = f"{meta['name']} pokemon"
     res = client.get(
         "https://api.ebay.com/buy/browse/v1/item_summary/search",
         headers={"Authorization": f"Bearer {token}",
@@ -107,6 +106,11 @@ def investigate(client: httpx.Client, token: str, card_id: str, meta: dict) -> N
         return
 
     items = res.json().get("itemSummaries", [])
+    print(f"\n--- DEBUG : 15 premiers titres eBay pour '{query}' ---")
+    for it in items[:15]:
+        print(f"  {it.get('title', '')[:75]}")
+    print("--- fin debug ---\n")
+
     kept, rejected = [], {}
     for it in items:
         title = it.get("title") or ""
@@ -115,16 +119,13 @@ def investigate(client: httpx.Client, token: str, card_id: str, meta: dict) -> N
             rejected[reason] = rejected.get(reason, 0) + 1
             continue
         kept.append({
-            "card_id": card_id,
-            "collected_at": TODAY,
-            "title": title,
+            "card_id": card_id, "collected_at": TODAY, "title": title,
             "price": (it.get("price") or {}).get("value"),
             "currency": (it.get("price") or {}).get("currency"),
             "condition": it.get("condition"),
             "grading": classify_grading(it.get("condition"), title),
             "seller_hash": hash_seller((it.get("seller") or {}).get("username")),
-            "item_id": it.get("itemId"),
-            "raw": None,
+            "item_id": it.get("itemId"), "raw": None,
         })
 
     if kept:
@@ -132,10 +133,20 @@ def investigate(client: httpx.Client, token: str, card_id: str, meta: dict) -> N
             kept, on_conflict="item_id,collected_at"
         ).execute()
 
-    total = len(items)
-    print(f"✓ {meta['name']} ({meta['local_id']}) : {len(kept)}/{total} annonces retenues")
+    print(f"✓ {meta['name']} ({meta['local_id']}) : {len(kept)}/{len(items)} retenues")
     for reason, n in sorted(rejected.items(), key=lambda x: -x[1]):
         print(f"    - {n} rejetees : {reason}")
+
+    conc = (
+        supabase.table("v_ebay_concentration")
+        .select("grading, annonces, vendeurs, hhi, part_max_pct, lecture")
+        .eq("card_id", card_id).eq("collected_at", TODAY)
+        .execute()
+    )
+    for c in conc.data:
+        print(f"    → {c['grading']:6} : {c['annonces']} annonces, "
+              f"{c['vendeurs']} vendeurs, HHI {c['hhi']}, "
+              f"plus gros {c['part_max_pct']}% — {c['lecture']}")
 
 
 def main() -> None:
@@ -148,18 +159,20 @@ def main() -> None:
                 return
             targets = [(card_id, meta)]
         else:
-            res = (supabase.table("anomalies").select("card_id")
-                   .eq("detected_date", TODAY).not_.like("card_id", "test-%")
+            res = (supabase.table("market_anomalies").select("id_product")
+                   .eq("detected_date", TODAY).gt("id_product", 0)
+                   .in_("rule", ["trend_ma_divergence", "market_divergence", "trend_zscore"])
                    .execute())
-            ids = list({r["card_id"] for r in res.data})
+            # Les anomalies sont sur id_product Cardmarket ; il faut le mapping
+            # vers card_id TCGdex. Pour l'instant, mode manuel privilegie.
+            ids = list({r["id_product"] for r in res.data})
             if not ids:
-                print("Aucune carte a investiguer aujourd'hui.")
+                print("Aucune carte forte a investiguer aujourd'hui.")
                 return
-            targets = []
-            for cid in ids:
-                m = get_card_meta(client, cid)
-                if m:
-                    targets.append((cid, m))
+            print(f"{len(ids)} carte(s) signalee(s), mais le mapping "
+                  f"id_product -> card_id n'est pas encore implemente.")
+            print("Utilise le mode manuel : python scripts/ebay_investigate.py <card_id>")
+            return
 
         print(f"{len(targets)} carte(s) a investiguer\n")
         token = get_token()
@@ -168,5 +181,7 @@ def main() -> None:
 
     supabase.rpc("purge_old_ebay_data", {}).execute()
     print("\nInvestigation terminee.")
+
+
 if __name__ == "__main__":
     main()
