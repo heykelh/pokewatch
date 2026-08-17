@@ -57,7 +57,7 @@ export default async function PokewatchPipeline() {
           />
           <div className="text-xs">
             <div className="font-medium text-foreground">
-              {health.daysMissing} jour(s) manquant(s) dans l&apos;historique
+              {health.daysMissing} jour(s) sans données
             </div>
             <div className="mt-1 text-muted-foreground">
               {health.missingDates
@@ -65,8 +65,10 @@ export default async function PokewatchPipeline() {
                 .join(", ")}
             </div>
             <div className="mt-1 text-muted-foreground">
-              Les données de marché ne sont disponibles que le jour même :
-              un jour manqué est définitivement perdu.
+              Ces jours-là, Cardmarket n&apos;a pas publié son relevé de prix.
+              La collecte n&apos;est pas en cause : la source elle-même
+              n&apos;était pas disponible, et un relevé non publié est
+              définitivement indisponible.
             </div>
           </div>
         </div>
