@@ -439,3 +439,52 @@ export async function fetchPipelineHealth(): Promise<PipelineHealth> {
     missingDates: (missing.data ?? []).map((r) => r.jour_manquant),
   };
 }
+
+export type PulsePoint = {
+  date: string;
+  medianReturn: number;
+  cardsAnalysed: number;
+};
+
+export async function fetchMarketPulseHistory(
+  days = 30,
+): Promise<PulsePoint[]> {
+  const { data } = await supabase
+    .from("v_market_pulse_public")
+    .select("snapshot_date, median_return, cards_analysees")
+    .order("snapshot_date", { ascending: false })
+    .limit(days);
+
+  return (data ?? [])
+    .map((r) => ({
+      date: r.snapshot_date as string,
+      medianReturn: (r.median_return as number) ?? 0,
+      cardsAnalysed: (r.cards_analysees as number) ?? 0,
+    }))
+    .reverse();
+}
+
+export type ActivityPoint = { date: string; fortes: number };
+
+export async function fetchAnomalyActivity(
+  days = 30,
+): Promise<ActivityPoint[]> {
+  const since = new Date(Date.now() - days * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+  const { data } = await supabase
+    .from("market_anomalies")
+    .select("detected_date, rule")
+    .gte("detected_date", since)
+    .gt("id_product", 0)
+    .in("rule", ["trend_ma_divergence", "market_divergence", "trend_zscore"]);
+
+  const buckets = new Map<string, number>();
+  for (const r of data ?? []) {
+    buckets.set(r.detected_date, (buckets.get(r.detected_date) ?? 0) + 1);
+  }
+  return Array.from(buckets.entries())
+    .map(([date, fortes]) => ({ date, fortes }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
