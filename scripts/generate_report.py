@@ -20,7 +20,7 @@ load_dotenv()
 supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 
 SYSTEM_PROMPT = """Tu es l'analyste de PokéWatch, un système de surveillance du marché des cartes Pokémon.
 
@@ -73,19 +73,30 @@ Exemple de collecte manquante (à suivre si data_available est faux) :
 
 
 def extract_numbers(text: str) -> set[str]:
-    """Extrait les nombres cites dans le texte, pour verification."""
-    return set(re.findall(r"\d+(?:[.,]\d+)?", text))
+    """Extrait les nombres cites, en collant d'abord les separateurs de
+    milliers (espace normale, insecable, insecable fine) : "22 665" -> "22665"."""
+    collapsed = re.sub(r"(\d)[\s\u00a0\u202f](\d{3})\b", r"\1\2", text)
+    # On repasse deux fois pour les nombres a deux groupes ("1 234 567")
+    collapsed = re.sub(r"(\d)[\s\u00a0\u202f](\d{3})\b", r"\1\2", collapsed)
+    return set(re.findall(r"\d+(?:[.,]\d+)?", collapsed))
 
 
 def dossier_numbers(dossier: dict) -> set[str]:
-    """Tous les nombres presents dans le dossier, sous forme de chaines."""
+    """Tous les nombres du dossier (valeurs ET texte, note_derive comprise),
+    normalises pour tolerer point/virgule et separateurs de milliers."""
     raw = json.dumps(dossier, ensure_ascii=False)
-    nums = set(re.findall(r"\d+(?:\.\d+)?", raw))
+    raw = re.sub(r"(\d)[\s\u00a0\u202f](\d{3})\b", r"\1\2", raw)
+    raw = re.sub(r"(\d)[\s\u00a0\u202f](\d{3})\b", r"\1\2", raw)
+
+    nums = set(re.findall(r"\d+(?:[.,]\d+)?", raw))
     extended = set(nums)
     for n in nums:
+        # Autorise les deux ecritures decimales
         extended.add(n.replace(".", ","))
-        if "." in n:
-            extended.add(n.split(".")[0])
+        extended.add(n.replace(",", "."))
+        # Autorise la partie entiere seule (arrondis dans le texte)
+        if "." in n or "," in n:
+            extended.add(re.split(r"[.,]", n)[0])
     return extended
 
 
