@@ -488,3 +488,76 @@ export async function fetchAnomalyActivity(
     .map(([date, fortes]) => ({ date, fortes }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+export type MarketVerdict = {
+  date: string | null;
+  medianReturn: number | null;
+  driftBaseline: number; // la derive structurelle (-1.2%)
+  cardsScanned: number;
+  cardsAnalysed: number;
+  strongAnomalies: number;
+  medianHabitual: number | null;
+  p90Habitual: number | null;
+  verdict: string;
+  reliability: number | null;
+};
+
+export async function fetchMarketVerdict(): Promise<MarketVerdict> {
+  // Dernier jour analyse
+  const pulseRes = await supabase
+    .from("v_market_pulse_public")
+    .select("snapshot_date, median_return, cards_analysees, cartes_scannees, pct_fiable")
+    .order("snapshot_date", { ascending: false })
+    .limit(1);
+  const pulse = pulseRes.data?.[0];
+  const day = pulse?.snapshot_date ?? null;
+
+  // Anomalies fortes du jour
+  let strong = 0;
+  if (day) {
+    const a = await supabase
+      .from("market_anomalies")
+      .select("id_product", { count: "exact", head: true })
+      .eq("detected_date", day)
+      .gt("id_product", 0)
+      .in("rule", ["trend_ma_divergence", "market_divergence", "trend_zscore"]);
+    strong = a.count ?? 0;
+  }
+
+  // Reference habituelle : mediane et p90 des jours precedents
+  const hist = await supabase
+    .from("market_anomalies")
+    .select("detected_date, rule")
+    .gt("id_product", 0)
+    .lt("detected_date", day ?? "2027-01-01")
+    .in("rule", ["trend_ma_divergence", "market_divergence", "trend_zscore"]);
+
+  const perDay = new Map<string, number>();
+  for (const r of hist.data ?? []) {
+    perDay.set(r.detected_date, (perDay.get(r.detected_date) ?? 0) + 1);
+  }
+  const counts = Array.from(perDay.values()).sort((a, b) => a - b);
+  const pct = (arr: number[], p: number) =>
+    arr.length ? arr[Math.floor((arr.length - 1) * p)] : null;
+
+  // Verdict
+  const p90 = pct(counts, 0.9);
+  const med = pct(counts, 0.5);
+  let verdict = "activite_normale";
+  if (counts.length < 3) verdict = "activite_normale";
+  else if (p90 && strong > p90 * 1.5) verdict = "alerte";
+  else if (p90 && strong > p90) verdict = "attention";
+
+  return {
+    date: day,
+    medianReturn: pulse?.median_return ?? null,
+    driftBaseline: -0.012,
+    cardsScanned: pulse?.cartes_scannees ?? 0,
+    cardsAnalysed: pulse?.cards_analysees ?? 0,
+    strongAnomalies: strong,
+    medianHabitual: med,
+    p90Habitual: p90,
+    verdict,
+    reliability: pulse?.pct_fiable ?? null,
+  };
+}

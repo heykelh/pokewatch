@@ -6,6 +6,7 @@ import PokewatchPipeline from "@/components/chart-blocks/charts/pokewatch-pipeli
 import PokewatchReport from "@/components/chart-blocks/charts/pokewatch-report";
 import Container from "@/components/container";
 import StatusBanner from "@/components/status-banner";
+import PokewatchVerdict from "@/components/chart-blocks/charts/pokewatch-verdict";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function Home() {
   return (
     <div>
       <StatusBanner />
+      <PokewatchVerdict />
       <PokewatchReport />
       <PokewatchMetrics />
 
