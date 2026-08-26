@@ -105,9 +105,28 @@ def main() -> None:
         inserted += len(batch)
         print(f"  {inserted}/{len(rows)}", end="\r")
 
-    print("Rafraichissement des vues d'analyse...")
-    supabase.rpc("refresh_market_views", {}).execute()
     print(f"\n✓ {inserted} snapshots ecrits pour le {snapshot_date}")
+
+    # Rafraichissement des vues d'analyse. L'ingestion ci-dessus a REUSSI :
+    # un echec de refresh ne doit pas faire echouer le script (les donnees
+    # sont ecrites, seules les vues d'analyse seraient en retard).
+    print("Rafraichissement des vues d'analyse...")
+    try:
+        supabase.rpc("refresh_market_views", {}).execute()
+        print("✓ Vues rafraichies")
+    except Exception as e:
+        print(f"⚠ Rafraichissement des vues echoue : {e}")
+        print("  Correctif manuel : refresh materialized view mv_market_daily;")
+
+    # Le pouls quotidien lit v_market_daily (donc mv_market_daily) : il DOIT
+    # etre rafraichi APRES la vue materialisee, sinon il calcule sur la veille.
+    print("Rafraichissement du pouls quotidien...")
+    try:
+        supabase.rpc("refresh_market_pulse", {}).execute()
+        print("✓ Pouls quotidien rafraichi")
+    except Exception as e:
+        print(f"⚠ Refresh du pouls echoue : {e}")
+        print("  Correctif manuel : select refresh_market_pulse();")
 
 
 if __name__ == "__main__":
