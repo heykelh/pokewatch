@@ -24,6 +24,7 @@ jobs:
         run: python scripts/download_priceguide.py | tee /tmp/pg.log
 
       - name: Ingestion watchlist (TCGdex)
+        continue-on-error: true
         run: python scripts/ingest_tcgdex.py
 
       - name: Detection des anomalies
