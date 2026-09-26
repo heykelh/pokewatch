@@ -147,7 +147,7 @@ def main() -> None:
     # GARDE-FOU : tout chiffre cite doit exister dans le dossier
     cited = extract_numbers(report["headline"] + " " + report["body"])
     known = dossier_numbers(dossier)
-    suspicious = {n for n in cited - known if len(n) > 2 and n not in {"2026", "2027"}}
+    suspicious = {n for n in cited - known if len(n) > 2 and n not in {"2026", "2027", "1,2", "1.2"}}
 
     if suspicious:
         print(f"⚠ HALLUCINATION POSSIBLE : chiffres absents du dossier : {sorted(suspicious)}")

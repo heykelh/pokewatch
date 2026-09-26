@@ -1,6 +1,8 @@
 create or replace function build_daily_dossier(p_date date default current_date)
 returns jsonb
 language sql
+security definer
+set statement_timeout = '300s'
 as $$
 with scan as (
   select count(*) as n from market_snapshots
