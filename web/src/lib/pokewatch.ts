@@ -541,3 +541,143 @@ export async function fetchMarketVerdict(): Promise<MarketVerdict> {
     reliability: pulse?.pct_fiable ?? null,
   };
 }
+
+export type Card30th = {
+  id_product: number;
+  nom: string;
+  set_code: string;
+  card_number: string | null;
+  image_url: string | null;
+  categorie: string;
+  premier_jour: string;
+  jours: number;
+  prix_debut: number | null;
+  prix_actuel: number | null;
+  variation_pct: number | null;
+};
+
+export async function fetch30thCards(): Promise<Card30th[]> {
+  const { data, error } = await supabase
+    .from("v_30th_cards")
+    .select("*")
+    .order("prix_actuel", { ascending: false });
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("fetch30thCards:", error.message);
+    return [];
+  }
+  return (data ?? []) as Card30th[];
+}
+
+export type TimePoint30th = {
+  id_product: number;
+  nom: string;
+  set_code: string;
+  snapshot_date: string;
+  trend: number;
+};
+
+export async function fetch30thTimeseries(): Promise<TimePoint30th[]> {
+  const { data, error } = await supabase
+    .from("v_30th_timeseries")
+    .select("*");
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("fetch30thTimeseries:", error.message);
+    return [];
+  }
+  return (data ?? []) as TimePoint30th[];
+}
+
+export type Summary30th = {
+  totalCards: number;
+  medianDrop: number;
+  worstCard: { nom: string; variation: number } | null;
+  cardsOver50Drop: number;
+  avgDropEx: number;
+  avgDropClassic: number;
+};
+
+export async function fetch30thSummary(): Promise<Summary30th> {
+  const cards = await fetch30thCards();
+  const withVar = cards.filter((c) => c.variation_pct !== null);
+
+  const variations = withVar
+    .map((c) => c.variation_pct as number)
+    .sort((a, b) => a - b);
+  const median =
+    variations.length > 0
+      ? variations[Math.floor(variations.length / 2)]
+      : 0;
+
+  const worst = withVar.reduce<Card30th | null>(
+    (min, c) =>
+      min === null || (c.variation_pct as number) < (min.variation_pct as number)
+        ? c
+        : min,
+    null,
+  );
+
+  const over50 = withVar.filter((c) => (c.variation_pct as number) <= -50).length;
+
+  const ex = withVar.filter((c) => c.categorie === "Set principal");
+  const classic = withVar.filter((c) => c.categorie === "Classic Collection");
+  const avg = (arr: Card30th[]) =>
+    arr.length
+      ? arr.reduce((s, c) => s + (c.variation_pct as number), 0) / arr.length
+      : 0;
+
+  return {
+    totalCards: cards.length,
+    medianDrop: Math.round(median * 10) / 10,
+    worstCard: worst
+      ? { nom: worst.nom, variation: worst.variation_pct as number }
+      : null,
+    cardsOver50Drop: over50,
+    avgDropEx: Math.round(avg(ex) * 10) / 10,
+    avgDropClassic: Math.round(avg(classic) * 10) / 10,
+  };
+}
+
+export type Tranche30th = {
+  tranche: string;
+  cartes: number;
+  chuteMoyenne: number;
+  ordre: number;
+};
+
+export async function fetch30thTranches(): Promise<Tranche30th[]> {
+  const cards = await fetch30thCards();
+  const withData = cards.filter(
+    (c) => c.variation_pct !== null && c.prix_debut !== null,
+  );
+
+  const buckets = [
+    { tranche: "150 € et +", ordre: 4, min: 150, max: Infinity },
+    { tranche: "50 – 150 €", ordre: 3, min: 50, max: 150 },
+    { tranche: "20 – 50 €", ordre: 2, min: 20, max: 50 },
+    { tranche: "moins de 20 €", ordre: 1, min: 0, max: 20 },
+  ];
+
+  return buckets
+    .map((b) => {
+      const inBucket = withData.filter(
+        (c) => (c.prix_debut as number) >= b.min && (c.prix_debut as number) < b.max,
+      );
+      const chute =
+        inBucket.length > 0
+          ? inBucket.reduce((s, c) => s + (c.variation_pct as number), 0) /
+            inBucket.length
+          : 0;
+      return {
+        tranche: b.tranche,
+        cartes: inBucket.length,
+        chuteMoyenne: Math.round(chute * 10) / 10,
+        ordre: b.ordre,
+      };
+    })
+    .filter((t) => t.cartes > 0)
+    .sort((a, b) => b.ordre - a.ordre);
+}

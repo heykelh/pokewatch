@@ -5,6 +5,7 @@ import {
   Gauge,
   type LucideIcon,
   Newspaper,
+  PartyPopper,
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
@@ -24,6 +25,7 @@ export const siteConfig = {
 
 export const navigations: Navigation[] = [
   { icon: Gauge, name: "Dashboard", href: "/" },
+  { icon: PartyPopper, name: "30 ans", href: "/30-ans" },
   { icon: Newspaper, name: "Bilans", href: "/bilans" },
   { icon: AlertTriangle, name: "Anomalies", href: "/anomalies" },
   { icon: CalendarClock, name: "Événements", href: "/evenements" },
