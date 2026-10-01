@@ -553,7 +553,12 @@ export type Card30th = {
   jours: number;
   prix_debut: number | null;
   prix_actuel: number | null;
+  plus_haut: number | null;
+  plus_bas: number | null;
   variation_pct: number | null;
+  vol_totale: number | null;
+  vol_7j: number | null;
+  vol_3j: number | null;
 };
 
 export async function fetch30thCards(): Promise<Card30th[]> {
@@ -680,4 +685,45 @@ export async function fetch30thTranches(): Promise<Tranche30th[]> {
     })
     .filter((t) => t.cartes > 0)
     .sort((a, b) => b.ordre - a.ordre);
+}
+
+export type CardDetail30th = {
+  card: Card30th | null;
+  history: { date: string; trend: number }[];
+  stats: {
+    plusHaut: number | null;
+    plusBas: number | null;
+    jours: number;
+  };
+};
+
+export async function fetch30thCardDetail(
+  idProduct: number,
+): Promise<CardDetail30th> {
+  const [cardRes, histRes] = await Promise.all([
+    supabase.from("v_30th_cards").select("*").eq("id_product", idProduct).limit(1),
+    supabase
+      .from("market_snapshots")
+      .select("snapshot_date, trend")
+      .eq("id_product", idProduct)
+      .order("snapshot_date", { ascending: true }),
+  ]);
+
+  const card = (cardRes.data?.[0] as Card30th) ?? null;
+  const history = (histRes.data ?? []).map((r) => ({
+    date: r.snapshot_date as string,
+    trend: Number(r.trend),
+  }));
+
+  const trends = history.map((h) => h.trend).filter((t) => t > 0);
+
+  return {
+    card,
+    history,
+    stats: {
+      plusHaut: trends.length ? Math.max(...trends) : null,
+      plusBas: trends.length ? Math.min(...trends) : null,
+      jours: history.length,
+    },
+  };
 }

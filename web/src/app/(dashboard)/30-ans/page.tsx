@@ -6,6 +6,7 @@ import {
   fetch30thTranches,
   type Card30th,
 } from "@/lib/pokewatch";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,12 @@ function variationColor(v: number | null): string {
 }
 
 function CardTile({ c }: { c: Card30th }) {
+  const seStabilise =
+    c.vol_3j !== null &&
+    c.vol_totale !== null &&
+    c.vol_totale > 0 &&
+    c.vol_3j < c.vol_totale * 0.4;
+
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
       <div className="relative aspect-[3/4] bg-muted">
@@ -66,6 +73,24 @@ function CardTile({ c }: { c: Card30th }) {
             {eur.format(c.prix_debut)} → {eur.format(c.prix_actuel)}
           </div>
         )}
+        {c.vol_3j !== null && (
+          <div className="flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
+            <span title="Volatilité depuis la sortie">
+              tot {c.vol_totale}%
+            </span>
+            <span title="Volatilité sur 7 jours">7j {c.vol_7j}%</span>
+            <span
+              title="Volatilité sur 3 jours"
+              className={
+                seStabilise
+                  ? "font-semibold text-green-600 dark:text-green-400"
+                  : ""
+              }
+            >
+              3j {c.vol_3j}%
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -78,9 +103,18 @@ export default async function TrenteAnsPage() {
     fetch30thTranches(),
   ]);
 
-  const parChute = [...cards]
-    .filter((c) => c.variation_pct !== null)
-    .sort((a, b) => (a.variation_pct as number) - (b.variation_pct as number));
+  // Tri par ordre du set : set principal (1→158) d'abord, puis Classic
+  // Collection (1→30). Les numeros non-chiffres (Mew RGB : R, G) vont en fin.
+  const numero = (c: Card30th): number => {
+    const n = parseInt(c.card_number ?? "", 10);
+    return Number.isNaN(n) ? 9999 : n;
+  };
+  const parSet = [...cards].sort((a, b) => {
+    if (a.set_code !== b.set_code) {
+      return a.set_code === "30th" ? -1 : 1;
+    }
+    return numero(a) - numero(b);
+  });
 
   const maxTrancheChute = Math.max(
     ...tranches.map((t) => Math.abs(t.chuteMoyenne)),
@@ -95,7 +129,7 @@ export default async function TrenteAnsPage() {
             Cas d&apos;étude
           </span>
           <span className="text-xs text-muted-foreground">
-            Set sorti le 16 septembre 2026 · suivi depuis le 18 septembre
+            Set sorti le 16 septembre 2026 · suivi depuis la sortie
           </span>
         </div>
         <h1 className="mb-3 text-2xl font-semibold">
@@ -194,19 +228,30 @@ export default async function TrenteAnsPage() {
         </div>
       </Container>
 
-      {/* Galerie des cartes par ampleur de chute */}
+      {/* Galerie des cartes dans l'ordre du set */}
       <Container className="border-b border-border py-6">
         <h2 className="mb-1 text-base font-semibold">
-          Toutes les cartes suivies, classées par ampleur de chute
+          Toutes les cartes du set, dans l&apos;ordre
         </h2>
         <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
-          Du plus fort décrochage aux rares cartes qui résistent. Chaque prix
-          est celui de la tendance Cardmarket (édition internationale), relevé
-          quotidiennement.
+          Set principal puis Classic Collection. Chaque prix est celui de la
+          tendance Cardmarket (édition internationale), relevé quotidiennement.
+          La <strong>volatilité</strong> mesure combien le prix bouge sur une
+          période : plus elle est élevée, plus le marché de la carte est agité.
+          Elle est affichée sur trois fenêtres — depuis la sortie (tot), 7 jours
+          (7j) et 3 jours (3j). Quand la volatilité récente (3j) tombe bien en
+          dessous de la volatilité totale, la carte se stabilise : sa correction
+          touche à sa fin. Un{" "}
+          <span className="font-semibold text-green-600 dark:text-green-400">
+            3j en vert
+          </span>{" "}
+          signale une carte qui se pose.
         </p>
         <div className="grid grid-cols-2 gap-3 tablet:grid-cols-4 laptop:grid-cols-6">
-          {parChute.map((c) => (
-            <CardTile key={c.id_product} c={c} />
+          {parSet.map((c) => (
+            <Link key={c.id_product} href={`/30-ans/${c.id_product}`}>
+              <CardTile c={c} />
+            </Link>
           ))}
         </div>
       </Container>

@@ -27,6 +27,12 @@ jobs:
         continue-on-error: true
         run: python scripts/ingest_tcgdex.py
 
+      - name: Suivi set 30 ans (mapping + images)
+        continue-on-error: true
+        run: |
+          python scripts/map_30th.py
+          python scripts/add_30th_images.py  
+
       - name: Detection des anomalies
         id: detect
         run: python scripts/detect_market.py | tee /tmp/detect.log
